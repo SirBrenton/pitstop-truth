@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "pitstop-truth receipt",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "id",
+    "created_at",
+    "source",
+    "hazard",
+    "constraints",
+    "knobs",
+    "verification"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "enum": ["receipt.v0"] },
+    "id": { "type": "string", "pattern": "^PT-\\d{4}-\\d{2}-\\d{2}-[a-z0-9-]{8,}$" },
+    "created_at": { "type": "string", "format": "date-time" },
+
+    "source": {
+      "type": "object",
+      "required": ["url", "kind"],
+      "properties": {
+        "url": { "type": "string" },
+        "kind": { "type": "string", "enum": ["github_issue", "github_pr", "log", "incident_postmortem", "other"] },
+        "repo": { "type": "string" },
+        "issue_or_pr": { "type": "integer" }
+      },
+      "additionalProperties": true
+    },
+
+    "hazard": {
+      "type": "object",
+      "required": ["class", "summary", "signals"],
+      "properties": {
+        "class": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "summary": { "type": "string" },
+        "signals": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "constraints": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+
+    "knobs": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+
+    "verification": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+
+    "notes": { "type": "string" },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "additionalProperties": false
+}

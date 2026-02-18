@@ -1,0 +1,38 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
+  "created_at": "2026-02-18T00:00:00Z",
+  "source": {
+    "kind": "github_issue",
+    "url": "https://github.com/pulumi/pulumi-azure-native/issues/4509",
+    "repo": "pulumi/pulumi-azure-native",
+    "issue_or_pr": 4509
+  },
+  "hazard": {
+    "class": ["rate_limit_429", "concurrency_burst", "retry_budget_exhausted"],
+    "summary": "Intermittent HTTP 429 on Azure PrivateEndpoint creation; reduced parallelism (--parallel 1) mitigates, suggesting burst/concurrency exceeds provider/API budget even after retries.",
+    "signals": [
+      "Status=429 Code=\"RetryableError\"",
+      "--parallel 1 seems to fix",
+      "maintainer notes retries already exist; 429 still surfaces after backoff"
+    ]
+  },
+  "constraints": [
+    "Concurrency must be capped to stay within Azure/broker throttling limits for this resource/API path.",
+    "Retries must be bounded by a budget (attempts and/or max elapsed time) to avoid indefinite churn.",
+    "Backoff should respect server hints (Retry-After) and include jitter to prevent synchronized retry storms."
+  ],
+  "knobs": [
+    "parallelism_cap (global and/or per-resource type)",
+    "retry_budget_max_attempts",
+    "retry_budget_max_elapsed_s",
+    "backoff_base_ms / backoff_max_ms / jitter",
+    "emit_retry_summary (attempts, elapsed, last Retry-After) in debug logs"
+  ],
+  "verification": [
+    "Repro: run a minimal program that creates PrivateEndpoint at parallelism N>1; observe frequency of 429.",
+    "Mitigation: set --parallel 1 (or provider-level concurrency cap) and confirm 429 disappears or drops sharply.",
+    "Instrumentation: confirm debug output reports retry attempts and total elapsed retry time when 429 occurs."
+  ],
+  "tags": ["pulumi", "azure", "privateendpoint", "429", "backoff", "concurrency"]
+}

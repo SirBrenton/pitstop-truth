@@ -1,0 +1,29 @@
+{
+  "schema_version": "index.v0",
+  "updated_at": "2026-02-18T16:27:36Z",
+  "receipts": [
+    {
+      "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
+      "date": "2026-02-18",
+      "hazard_class": [
+        "rate_limit_429",
+        "concurrency_burst",
+        "retry_budget_exhausted"
+      ],
+      "source_url": "https://github.com/pulumi/pulumi-azure-native/issues/4509",
+      "repo": "pulumi/pulumi-azure-native",
+      "signals": [
+        "Status=429 RetryableError",
+        "--parallel 1 fixes",
+        "429 after backoff"
+      ],
+      "knobs": [
+        "parallelism_cap",
+        "retry_budget",
+        "backoff_jitter",
+        "emit_retry_summary"
+      ],
+      "path": "receipts/2026/02/PT-2026-02-18-pulumi-azure-native-429-privateendpoint/receipt.json"
+    }
+  ]
+}
