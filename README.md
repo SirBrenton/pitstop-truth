@@ -22,16 +22,31 @@ This repo is a public library of small, audit-friendly receipts that:
 
 ## Receipt contract (v0)
 
-A receipt is a JSON file that includes, at minimum:
-- `id`, `date`, `title`
-- `source` (URLs and minimal context)
-- `hazards` (what went wrong)
-- `constraints` (what must be true to prevent it)
-- `knobs` (config/controls you can change)
-- `verification` (how to prove the fix worked)
-- optional `tags`
+A receipt is a single JSON file that conforms to `schemas/receipt.v0.json`.
+
+### Required fields
+- `schema_version`: must be `"receipt.v0"`
+- `id`: `PT-YYYY-MM-DD-<slug>` (lowercase a–z / 0–9 / `-`, slug len ≥ 8)
+- `created_at`: ISO 8601 datetime (UTC recommended, `...Z`)
+- `source`:
+  - `url` (primary evidence)
+  - `kind`: `github_issue | github_pr | log | incident_postmortem | other`
+  - optional: `repo`, `issue_or_pr`, plus any extra metadata (allowed)
+- `hazard`:
+  - `class`: array of hazard class strings (e.g. `rate_limit_429`, `retry_budget_exhausted`)
+  - `summary`: one-line description of the failure mode
+  - `signals`: machine-readable-ish strings extracted from evidence (error text, headers, “--parallel 1 fixes”, etc.)
+- `constraints`: array of “must be true” guardrails that prevent recurrence
+- `knobs`: array of configurable controls (limits, backoff params, concurrency caps, etc.)
+- `verification`: array of steps to prove mitigation worked
+
+### Optional fields
+- `notes`: freeform context
+- `tags`: array of strings
 
 Schema: `schemas/receipt.v0.json`
+
+> Schema enforcement tooling not wired yet; for now we validate JSON syntax and keep the contract tight.
 
 ## Adding a new receipt (daily workflow)
 
@@ -39,17 +54,19 @@ Schema: `schemas/receipt.v0.json`
 
 ```bash
 DATE="YYYY-MM-DD"
-RID="PT-$DATE-<slug>"
-mkdir -p "receipts/YYYY/MM/$RID"
+YYYY="${DATE%%-*}"
+MM="${DATE#*-}"; MM="${MM%%-*}"
+RID="PT-$DATE-<source>-<slug>"
+mkdir -p "receipts/$YYYY/$MM/$RID"
 ```
 
-2.	Add receipt.json in that folder and validate it locally:
+2. Add receipt.json in that folder and validate it locally:
 
 ```bash
 python3 -m json.tool "receipts/YYYY/MM/$RID/receipt.json" >/dev/null
 ```
 
-3.	Upsert it into index.json using the helper script:
+3. Upsert it into index.json using the helper script:
 
 ```bash
 python3 scripts/add_to_index.py \
@@ -66,7 +83,7 @@ python3 scripts/add_to_index.py \
   --knob "backoff_jitter"
 ```
 
-4.	Validate + commit:
+4. Validate + commit:
 
 ```bash
 python3 -m json.tool index.json >/dev/null
