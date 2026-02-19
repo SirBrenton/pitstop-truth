@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-02-18T16:27:36Z",
+  "updated_at": "2026-02-19T00:14:28Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -24,6 +24,24 @@
         "emit_retry_summary"
       ],
       "path": "receipts/2026/02/PT-2026-02-18-pulumi-azure-native-429-privateendpoint/receipt.json"
+    },
+    {
+      "id": "PT-2025-07-15-cockroach-timeout-deadline",
+      "date": "2025-07-15",
+      "hazard_class": [
+        "timeout_deadline"
+      ],
+      "source_url": "https://github.com/cockroachdb/cockroach/issues/150251",
+      "repo": "cockroachdb/cockroach",
+      "signals": [
+        "operation \"get-user-session\" timed out after 10.001s (given timeout 10s)",
+        "context deadline exceeded"
+      ],
+      "knobs": [
+        "timeout_budget_seconds:get-user-session",
+        "test_timeout_budget_seconds:TestColdStartLatency"
+      ],
+      "path": "receipts/2025/07/PT-2025-07-15-cockroach-timeout-deadline/receipt.json"
     }
   ]
 }
