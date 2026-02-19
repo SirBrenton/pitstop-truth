@@ -9,30 +9,47 @@
     "issue_or_pr": 4509
   },
   "hazard": {
-    "class": ["rate_limit_429", "concurrency_burst", "retry_budget_exhausted"],
-    "summary": "Intermittent HTTP 429 on Azure PrivateEndpoint creation; reduced parallelism (--parallel 1) mitigates, suggesting burst/concurrency exceeds provider/API budget even after retries.",
+    "class": [
+      "rate_limit_429",
+      "concurrency_burst",
+      "retry_budget_exhausted"
+    ],
+    "summary": "Intermittent HTTP 429 during Azure PrivateEndpoint creation; reducing Pulumi parallelism (--parallel 1) mitigates, suggesting burst/concurrency exceeds an API/provider budget even after retries.",
     "signals": [
-      "Status=429 Code=\"RetryableError\"",
-      "--parallel 1 seems to fix",
-      "maintainer notes retries already exist; 429 still surfaces after backoff"
+      "Status=429 Code=\"RetryableError\" Message=\"A retryable error occurred.\"",
+      "--parallel 1 seems to fix the issue",
+      "We automatically retry responses with status code 429 so this error is occurring after we retried with a back-off strategy",
+      "expose the retry parameters via provider configuration / environment variables"
     ]
   },
   "constraints": [
-    "Concurrency must be capped to stay within Azure/broker throttling limits for this resource/API path.",
-    "Retries must be bounded by a budget (attempts and/or max elapsed time) to avoid indefinite churn.",
-    "Backoff should respect server hints (Retry-After) and include jitter to prevent synchronized retry storms."
+    "Concurrency for PrivateEndpoint create/update must be capped (globally or per-resource) to stay within throttling limits under burst provisioning.",
+    "429 handling must be bounded by a retry budget (max attempts and/or max elapsed time) to avoid unbounded churn.",
+    "Backoff must honor server hints when present (Retry-After) and include jitter to reduce synchronized retry storms.",
+    "When a 429 surfaces after retries, debug logs must emit a compact retry summary (attempts, total elapsed retry time, and last Retry-After seen if any)."
   ],
   "knobs": [
     "parallelism_cap (global and/or per-resource type)",
     "retry_budget_max_attempts",
     "retry_budget_max_elapsed_s",
-    "backoff_base_ms / backoff_max_ms / jitter",
-    "emit_retry_summary (attempts, elapsed, last Retry-After) in debug logs"
+    "backoff_base_ms",
+    "backoff_max_ms",
+    "backoff_jitter",
+    "honor_retry_after",
+    "emit_retry_summary"
   ],
   "verification": [
-    "Repro: run a minimal program that creates PrivateEndpoint at parallelism N>1; observe frequency of 429.",
+    "Repro: create PrivateEndpoint with parallelism N>1 and record frequency of 429.",
     "Mitigation: set --parallel 1 (or provider-level concurrency cap) and confirm 429 disappears or drops sharply.",
-    "Instrumentation: confirm debug output reports retry attempts and total elapsed retry time when 429 occurs."
+    "If retry knobs are exposed: increase retry budget/backoff and confirm reduced 429 surfacing under controlled burst.",
+    "Instrumentation: confirm debug output includes retry summary when 429 occurs (attempts, elapsed, last Retry-After if present)."
   ],
-  "tags": ["pulumi", "azure", "privateendpoint", "429", "backoff", "concurrency"]
+  "tags": [
+    "pulumi",
+    "azure",
+    "privateendpoint",
+    "429",
+    "backoff",
+    "concurrency"
+  ]
 }
