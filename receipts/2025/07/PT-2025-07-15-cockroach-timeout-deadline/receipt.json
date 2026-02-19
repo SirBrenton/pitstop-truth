@@ -6,7 +6,7 @@
     "kind": "github_issue",
     "url": "https://github.com/cockroachdb/cockroach/issues/150251",
     "repo": "cockroachdb/cockroach",
-    "issue_or_pr": "150251",
+    "issue_or_pr": 150251,
     "evidence_urls": [
       "https://github.com/cockroachdb/cockroach/actions/runs/16285620967?pr=150105"
     ],
