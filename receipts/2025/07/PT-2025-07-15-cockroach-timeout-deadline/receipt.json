@@ -1,0 +1,46 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2025-07-15-cockroach-timeout-deadline",
+  "created_at": "2026-02-19T00:14:28Z",
+  "source": {
+    "kind": "github_issue",
+    "url": "https://github.com/cockroachdb/cockroach/issues/150251",
+    "repo": "cockroachdb/cockroach",
+    "issue_or_pr": "150251",
+    "evidence_urls": [
+      "https://github.com/cockroachdb/cockroach/actions/runs/16285620967?pr=150105"
+    ],
+    "vendor_refs": [
+      "CRDB-52620"
+    ]
+  },
+  "hazard": {
+    "class": [
+      "timeout_deadline"
+    ],
+    "summary": "TestColdStartLatency fails when a get-user-session operation exceeds a fixed 10s timeout (context deadline exceeded).",
+    "signals": [
+      "operation \"get-user-session\" timed out after 10.001s (given timeout 10s)",
+      "context deadline exceeded",
+      "internal error while retrieving user account memberships",
+      "TestColdStartLatency",
+      "SQLSTATE 28000"
+    ]
+  },
+  "constraints": [
+    "Timeout budgets for get-user-session must exceed observed tail latency under CI cold-start conditions (avoid hard 10s caps at the boundary).",
+    "Timeout errors must include operation name, elapsed time, and configured timeout budget (present in evidence).",
+    "The test must not be fragile to expected CI tail latency; either reduce critical-path latency or increase the timeout budget with margin."
+  ],
+  "knobs": [
+    "timeout_budget_seconds:get-user-session",
+    "test_timeout_budget_seconds:TestColdStartLatency",
+    "ci_parallelism_or_contention_controls (if CI load impacts tail latency)"
+  ],
+  "verification": [
+    "Re-run the linked GitHub Actions workflow and confirm TestColdStartLatency passes.",
+    "Confirm the prior signature string no longer appears in CI logs: \"timed out after 10.001s (given timeout 10s)\".",
+    "If the mitigation is a budget increase, confirm the new timeout has margin above tail latency (not barely passing)."
+  ],
+  "notes": "Type A receipt: evidence includes explicit timeout budget (10s), elapsed (10.001s), operation name, and the error chain in CI logs."
+}
