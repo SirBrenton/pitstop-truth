@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-02-19T00:14:28Z",
+  "updated_at": "2026-02-22T16:11:20Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -42,6 +42,27 @@
         "test_timeout_budget_seconds:TestColdStartLatency"
       ],
       "path": "receipts/2025/07/PT-2025-07-15-cockroach-timeout-deadline/receipt.json"
+    },
+    {
+      "id": "PT-2025-12-13-gh-1239-e1000-tx-hang-controlplane-unreachable",
+      "date": "2025-12-13",
+      "hazard_class": [
+        "timeout_deadline",
+        "nic_driver_e1000_tx_hang"
+      ],
+      "source_url": "https://github.com/githedgehog/fabricator/issues/1239",
+      "repo": "githedgehog/fabricator",
+      "signals": [
+        "waiting for ready: context deadline exceeded",
+        "Detected Tx Unit Hang",
+        "connect failed (Connection timed out)"
+      ],
+      "knobs": [
+        "nic_driver: e1000 vs virtio (VLAB control VM)",
+        "disable_offloads:enp2s1",
+        "diagnostics_fallback:console_show_tech"
+      ],
+      "path": "receipts/2025/12/PT-2025-12-13-gh-1239-e1000-tx-hang-controlplane-unreachable/receipt.json"
     }
   ]
 }
