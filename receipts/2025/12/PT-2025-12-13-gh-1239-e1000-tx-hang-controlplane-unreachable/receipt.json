@@ -1,0 +1,70 @@
+{
+    "schema_version": "receipt.v0",
+    "id": "PT-2025-12-13-gh-1239-e1000-tx-hang-controlplane-unreachable",
+    "created_at": "2025-12-13T00:00:00Z",
+    "source": {
+        "kind": "github_issue",
+        "url": "https://github.com/githedgehog/fabricator/issues/1239",
+        "repo": "githedgehog/fabricator",
+        "issue_or_pr": 1239,
+        "evidence_urls": [
+            "https://github.com/githedgehog/dataplane/actions/runs/20069038523/job/57568210055"
+        ],
+        "related_refs": [
+            "https://github.com/githedgehog/fabricator/pull/1478",
+            "https://github.com/githedgehog/fabricator/pull/1443"
+        ]
+    },
+    "hazard": {
+        "class": [
+            "timeout_deadline",
+            "control_plane_unreachable",
+            "ci_flake",
+            "nic_driver_e1000_tx_hang",
+            "diagnostics_collection_timeout"
+        ],
+        "summary": "CI VLAB switches never become ready and readiness wait hits context deadline exceeded; root cause is intermittent control-plane reachability failure caused by e1000 NIC Tx Unit Hang (SSH/show-tech also times out).",
+        "signals": [
+            "Switches status notReady=\"[leaf-01 leaf-02 leaf-03 leaf-04 leaf-05 spine-01 spine-02]\"",
+            "Failed to wait for ready err=\"waiting for ready: context deadline exceeded\"",
+            "Retry attempt number=2",
+            "Some diagnostics collection failed ... ssh ... connect failed (Connection timed out)",
+            "kernel: e1000 ... Detected Tx Unit Hang",
+            "Destination Host Unreachable (ping to control-plane API IP)",
+            "control-plane API unreachable from switch console"
+        ]
+    },
+    "constraints": [
+        "Readiness waits must surface the underlying dependency failure (control-plane reachability) rather than only a generic context deadline exceeded.",
+        "CI/VLAB networking must avoid known-bad NIC driver behavior (e1000 Tx Unit Hang) or apply mitigations that prevent Tx stalls.",
+        "Diagnostics collection must have a console/alternate path when SSH/proxy is unavailable, and must clearly report which path failed and why.",
+        "Timeouts/retries must be bounded and paired with a fast classification signature so repeated flakes are diagnosed in minutes, not hours."
+    ],
+    "knobs": [
+        "ci_timeout_budget_seconds:wait_for_ready",
+        "retry_budget_max_attempts:wait_for_ready",
+        "nic_driver: e1000 vs virtio (VLAB control VM)",
+        "disable_offloads:enp2s1 (Tx/Rx/TSO/GSO/GRO/VLAN offloads as applicable)",
+        "diagnostics_fallback:console_show_tech (requires HHFAB_SWITCH_USER/HHFAB_SWITCH_PASS)",
+        "emit_root_cause_hint:control_plane_reachability_check (ping/API health) before declaring notReady"
+    ],
+    "verification": [
+        "Reproduce by running VLAB CI jobs that previously hit notReady\u226515x and context deadline exceeded; confirm signature disappears after mitigation.",
+        "Confirm control-plane API reachability from switch console during the test (ping/API health) remains stable across runs.",
+        "Confirm control VM no longer logs e1000 \"Detected Tx Unit Hang\" (or that virtio migration/offload-disable prevents Tx hangs).",
+        "Confirm diagnostics collection succeeds via SSH or console fallback and the collected show-tech includes enough data to classify future failures."
+    ],
+    "tags": [
+        "githedgehog",
+        "vlab",
+        "ci",
+        "timeout",
+        "context-deadline-exceeded",
+        "e1000",
+        "tx-hang",
+        "virtio",
+        "offloads",
+        "diagnostics"
+    ],
+    "notes": "This receipt captures the evolved understanding: the initial symptom (switches notReady \u2192 deadline exceeded) masked the real failure (control-plane reachability loss driven by e1000 Tx hang). The remediation path discussed includes disabling remaining offloads and/or migrating to virtio; console show-tech fallback is part of making the failure classifiable under SSH outages."
+}
