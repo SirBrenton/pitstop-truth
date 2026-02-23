@@ -1,0 +1,66 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-02-22-picoclaw-629-llm-500-no-retry-task-drop",
+  "created_at": "2026-02-22T00:00:00Z",
+  "source": {
+    "kind": "github_issue",
+    "url": "https://github.com/sipeed/picoclaw/issues/629",
+    "repo": "sipeed/picoclaw",
+    "issue_or_pr": 629
+  },
+  "hazard": {
+    "class": [
+      "llm_provider_5xx_transient",
+      "missing_retry_policy",
+      "task_drop_no_recovery"
+    ],
+    "summary": "Transient LLM provider failures (HTTP 500) can cause long-running tasks to hang or drop without retry, resulting in silent reliability loss.",
+    "signals": [
+      "Server may return HTTP 500 sometimes",
+      "Task hang without retry, logs output 'LLM call failed'",
+      "Actual: task dropped",
+      "Expected: retry and continue",
+      "Retryable errors suggested: 500/502/503/429/network timeout; do not retry 401/403/400 (except 429)",
+      "Respect Retry-After when present"
+    ]
+  },
+  "constraints": [
+    "LLM/tool calls must classify errors into retryable vs terminal (e.g., retry 5xx/429/timeouts; do not retry 4xx except 429).",
+    "Retry behavior must be bounded by a retry budget (max attempts and/or max elapsed time) to avoid unbounded churn.",
+    "Backoff must use exponential delay with jitter to avoid synchronized retry storms.",
+    "When Retry-After is provided (429), backoff must honor it.",
+    "If retries are exhausted, the system must surface a user-facing failure state (no silent task drop/hang)."
+  ],
+  "knobs": [
+    "max_retries (default 3)",
+    "retry_budget_max_elapsed_s",
+    "backoff_base_s",
+    "backoff_max_s",
+    "backoff_jitter",
+    "honor_retry_after",
+    "retryable_status_codes (500/502/503/429)",
+    "terminal_status_codes (400/401/403/404 etc., excluding 429)",
+    "user_feedback_on_retry (typing/thinking indicator)",
+    "error_message_sanitization (avoid raw internal errors)"
+  ],
+  "verification": [
+    "Inject transient failures (HTTP 500 / network timeout) during a long task and confirm the agent retries with exponential backoff + jitter instead of dropping.",
+    "Inject a terminal auth error (401/403) and confirm the agent fails fast without retry.",
+    "Inject 429 with Retry-After and confirm the agent delays according to Retry-After.",
+    "Confirm logs include retry attempt count and final outcome (success or exhausted).",
+    "Confirm the user sees a clear message when retries are exhausted (no silent hang/drop)."
+  ],
+  "tags": [
+    "picoclaw",
+    "llm",
+    "openrouter",
+    "retry",
+    "backoff",
+    "jitter",
+    "429",
+    "500",
+    "reliability",
+    "task-drop"
+  ],
+  "notes": "This receipt captures a common agent reliability failure mode: treating LLM calls as 'single shot' despite expected transient failures (5xx/429/timeouts). The mitigation is a bounded, configurable retry policy with error classification and user-visible status when retries are occurring or exhausted."
+}

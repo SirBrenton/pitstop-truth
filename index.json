@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-02-22T16:11:20Z",
+  "updated_at": "2026-02-23T03:46:02Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -63,6 +63,28 @@
         "diagnostics_fallback:console_show_tech"
       ],
       "path": "receipts/2025/12/PT-2025-12-13-gh-1239-e1000-tx-hang-controlplane-unreachable/receipt.json"
+    },
+    {
+      "id": "PT-2026-02-22-picoclaw-629-llm-500-no-retry-task-drop",
+      "date": "2026-02-22",
+      "hazard_class": [
+        "llm_provider_5xx_transient",
+        "missing_retry_policy",
+        "task_drop_no_recovery"
+      ],
+      "source_url": "https://github.com/sipeed/picoclaw/issues/629",
+      "repo": "sipeed/picoclaw",
+      "signals": [
+        "HTTP 500 sometimes",
+        "LLM call failed",
+        "Task dropped"
+      ],
+      "knobs": [
+        "max_retries (default 3)",
+        "backoff + jitter",
+        "honor Retry-After"
+      ],
+      "path": "receipts/2026/02/PT-2026-02-22-picoclaw-629-llm-500-no-retry-task-drop/receipt.json"
     }
   ]
 }
