@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-02-23T04:22:24Z",
+  "updated_at": "2026-02-23T16:14:48Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -107,6 +107,29 @@
         "honor Retry-After"
       ],
       "path": "receipts/2026/02/PT-2026-02-23-timezone-app-ipapi-429-backoff-retryafter-503/receipt.json"
+    },
+    {
+      "id": "PT-2025-07-28-n8n-17758-shopify-getmany-429-throttle-missing",
+      "date": "2025-07-28",
+      "hazard_class": [
+        "rate_limit_429",
+        "pagination_loop_burst",
+        "missing_client_side_throttle"
+      ],
+      "source_url": "https://github.com/n8n-io/n8n/issues/17758",
+      "repo": "n8n-io/n8n",
+      "signals": [
+        "Exceeded 2 calls per second for api client",
+        "Return all triggers pagination loop burst",
+        "429 - {\"errors\":\"Exceeded 2 calls per second for api client. Reduce request rates to resume uninterrupted service.\"}"
+      ],
+      "knobs": [
+        "shopify_rps_limit (default 2 req/sec)",
+        "pagination_concurrency_cap",
+        "honor Retry-After",
+        "backoff + jitter"
+      ],
+      "path": "receipts/2025/07/PT-2025-07-28-n8n-17758-shopify-getmany-429-throttle-missing/receipt.json"
     }
   ]
 }
