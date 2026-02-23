@@ -14,6 +14,40 @@ This repo is a public library of small, audit-friendly receipts that:
 - propose constraints/knobs that prevent recurrence
 - describe how to verify the mitigation
 
+## Eligibility (what qualifies as a truth artifact)
+
+A receipt is eligible if it has:
+
+- **Primary evidence** (issue, PR, logs, release note, or postmortem)
+- A **clear failure mode** worth naming (hazard)
+- At least one constraint (“must be true”) and one knob (“we can tune this”)
+- A **verification path** (how you’d prove the mitigation worked)
+
+Receipts may be sourced from **public issues/PRs/releases even when the incident is already fixed** — already fixed is fine **if the evidence is still legible and the mitigation generalizes.**
+
+## Receipt worthiness (tight / expensive truth)
+
+This repo is intentionally **high-signal**. Not every “bug” or “rate limit” is a receipt.
+
+A candidate is receipt-worthy only if it meets **all** of:
+
+1) **Real failure, not a wishlist**
+   - Evidence of an actual incident: error output, status codes, timeouts, CI failure logs, user impact.
+   - Not just “implement X” / “add rate limiting” / generic hardening.
+   - If the issue has no incident evidence (only ‘please add rate limiting’), it’s not a receipt.
+
+2) **Reusable pattern**
+   - The failure mode generalizes beyond one codebase (e.g., 429 + Retry-After, retry budget exhaustion, deadline exceeded masking root cause).
+   - If it’s a one-off patch detail, it doesn’t belong here.
+
+3) **Leverage**
+   - The constraints/knobs materially change outcomes (reduce recurrence, bound blast radius, make diagnosis faster).
+   - A receipt should teach a guardrail, not narrate a fix.
+
+Radar can surface candidates; **this repo is the final filter.**
+
+If it wouldn’t help a different team six months from now, don’t capture 
+
 ## Structure
 
 - `index.json` — machine entrypoint (registry of receipts)
