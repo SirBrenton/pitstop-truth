@@ -1,0 +1,43 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2025-07-28-n8n-17758-shopify-getmany-429-throttle-missing",
+  "created_at": "2026-02-23T16:13:13Z",
+  "source": {
+    "kind": "github_issue",
+    "url": "https://github.com/n8n-io/n8n/issues/17758",
+    "repo": "n8n-io/n8n",
+    "issue_or_pr": 17758
+  },
+  "hazard": {
+    "class": [
+      "rate_limit_429",
+      "pagination_loop_burst",
+      "missing_client_side_throttle"
+    ],
+    "summary": "Return-all pagination bursts Shopify requests and trips the 2 req/sec limit, producing 429s.",
+    "signals": [
+      "Exceeded 2 calls per second for api client",
+      "nodeType: n8n-nodes-base.shopify",
+      "operation: getAll (Return all)",
+      "429 - {\"errors\":\"Exceeded 2 calls per second for api client. Reduce request rates to resume uninterrupted service.\"}"
+    ]
+  },
+  "constraints": [
+    "Requests to Shopify must be paced per store+credential to avoid exceeding vendor limits.",
+    "On HTTP 429, if Retry-After is present, wait at least that long before retrying.",
+    "Return-all pagination must not burst; cap concurrency or enforce sequential pacing."
+  ],
+  "knobs": [
+    "shopify_rps_limit (default 2 req/sec)",
+    "pagination_concurrency_cap",
+    "max_retries",
+    "backoff + jitter",
+    "honor Retry-After"
+  ],
+  "verification": [
+    "Reproduce with Return all enabled; observe baseline 429s.",
+    "Enable limiter + 429 handling; rerun and confirm the workflow completes and 429s drop to ~0.",
+    "Add/verify a test that simulates 429 + Retry-After and asserts pacing before retry."
+  ],
+  "notes": "Classic vendor-throttle bug where a pagination loop ignores upstream pacing. Also reported to affect other Shopify nodes (e.g., order creation line-item lookups)."
+}
