@@ -1,0 +1,56 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-02-23-timezone-app-ipapi-429-backoff-retryafter-503",
+  "created_at": "2026-02-23T04:21:59Z",
+  "source": {
+    "kind": "github_issue",
+    "url": "https://github.com/olaoluthomas/timezone-app/issues/132",
+    "repo": "olaoluthomas/timezone-app",
+    "issue_or_pr": 132
+  },
+  "hazard": {
+    "class": [
+      "rate_limit_429",
+      "missing_retry_policy",
+      "upstream_error_mapped_to_500"
+    ],
+    "summary": "Upstream 429 from ipapi.co propagated as a generic 500; no retry/backoff or Retry-After handling.",
+    "signals": [
+      "ipapi.co responds with 429 Too Many Requests",
+      "GET /api/timezone returns 500",
+      "Retry-After header",
+      "exponential backoff (1s→2s→4s)",
+      "return 503 Service Unavailable instead of 500"
+    ]
+  },
+  "constraints": [
+    "429 (and other retryable upstream failures) must not surface as generic 500 to callers",
+    "Retries must be bounded (max attempts) and must respect Retry-After when present",
+    "When upstream is rate-limiting, response must be classified as temporary (503) with Retry-After to shape client behavior",
+    "Fallback behavior must be explicit and non-null in production paths"
+  ],
+  "knobs": [
+    "UPSTREAM_MAX_RETRIES (e.g., 3)",
+    "UPSTREAM_BASE_DELAY (e.g., 1s exponential backoff)",
+    "honor Retry-After header (override computed delay)",
+    "concurrency cap / request coalescing (optional)"
+  ],
+  "verification": [
+    "Induce 429 from ipapi.co (or stub upstream to 429) and confirm handler returns 503 + Retry-After (not 500).",
+    "Confirm retry attempts occur with exponential backoff and stop at UPSTREAM_MAX_RETRIES.",
+    "If Retry-After is present, confirm delay uses it instead of computed backoff.",
+    "Confirm production fallback path does not return null and does not re-emit a generic 500 for rate limits.",
+    "Run unit tests covering retry/backoff + exhausted retry classification."
+  ],
+  "tags": [
+    "rate-limit",
+    "429",
+    "retry-after",
+    "backoff",
+    "503",
+    "node",
+    "fetch",
+    "ipapi"
+  ],
+  "notes": "Issue was closed quickly via PR #134 and released; still receipt-worthy because it captures a durable pattern: upstream 429 should be retried with bounded backoff, Retry-After respected, and surfaced as 503 with Retry-After rather than a generic 500."
+}
