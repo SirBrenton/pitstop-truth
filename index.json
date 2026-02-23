@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-02-23T03:46:02Z",
+  "updated_at": "2026-02-23T04:22:24Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -85,6 +85,28 @@
         "honor Retry-After"
       ],
       "path": "receipts/2026/02/PT-2026-02-22-picoclaw-629-llm-500-no-retry-task-drop/receipt.json"
+    },
+    {
+      "id": "PT-2026-02-23-timezone-app-ipapi-429-backoff-retryafter-503",
+      "date": "2026-02-23",
+      "hazard_class": [
+        "rate_limit_429",
+        "missing_retry_policy",
+        "upstream_error_mapped_to_500"
+      ],
+      "source_url": "https://github.com/olaoluthomas/timezone-app/issues/132",
+      "repo": "olaoluthomas/timezone-app",
+      "signals": [
+        "ipapi.co responds with 429 Too Many Requests",
+        "GET /api/timezone returns 500",
+        "return 503 + Retry-After"
+      ],
+      "knobs": [
+        "UPSTREAM_MAX_RETRIES",
+        "backoff + jitter",
+        "honor Retry-After"
+      ],
+      "path": "receipts/2026/02/PT-2026-02-23-timezone-app-ipapi-429-backoff-retryafter-503/receipt.json"
     }
   ]
 }
