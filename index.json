@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-02-23T16:14:48Z",
+  "updated_at": "2026-02-24T02:47:15Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -130,6 +130,29 @@
         "backoff + jitter"
       ],
       "path": "receipts/2025/07/PT-2025-07-28-n8n-17758-shopify-getmany-429-throttle-missing/receipt.json"
+    },
+    {
+      "id": "PT-2026-02-19-openclaw-20316-failover-429-billing-misclass-cooldown",
+      "date": "2026-02-19",
+      "hazard_class": [
+        "rate_limit_429",
+        "error_misclassification",
+        "cooldown_scope_bug",
+        "failover_skips_viable_fallback"
+      ],
+      "source_url": "https://github.com/openclaw/openclaw/issues/20316",
+      "repo": "openclaw/openclaw",
+      "signals": [
+        "Max plan per-model token pools",
+        "429/token pool exhaustion treated as billing-disabled",
+        "auth profile cooldown skips same-provider fallback"
+      ],
+      "knobs": [
+        "cooldown_scope (model vs provider/profile)",
+        "billing_disable_only_on_402_or_suspension",
+        "failover_decision_log_event"
+      ],
+      "path": "receipts/2026/02/PT-2026-02-19-openclaw-20316-failover-429-billing-misclass-cooldown/receipt.json"
     }
   ]
 }
