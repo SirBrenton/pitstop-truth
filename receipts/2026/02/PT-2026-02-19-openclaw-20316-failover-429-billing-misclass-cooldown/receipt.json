@@ -1,0 +1,48 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-02-19-openclaw-20316-failover-429-billing-misclass-cooldown",
+  "created_at": "2026-02-24T02:47:12Z",
+  "source": {
+    "kind": "github_issue",
+    "url": "https://github.com/openclaw/openclaw/issues/20316",
+    "repo": "openclaw/openclaw",
+    "issue_or_pr": 20316
+  },
+  "hazard": {
+    "class": [
+      "rate_limit_429",
+      "error_misclassification",
+      "cooldown_scope_bug",
+      "failover_skips_viable_fallback"
+    ],
+    "summary": "Model-scoped token exhaustion (429) is misclassified as provider-level billing failure, causing auth-profile cooldown and skipping same-provider fallbacks.",
+    "signals": [
+      "Claude Max plan has separate per-model token pools (Opus/Sonnet/Haiku)",
+      "Opus token pool exhausted → treated as billing-disabled",
+      "auth profile anthropic:default enters cooldown",
+      "same-provider fallback (Sonnet) skipped",
+      "falls through to weaker local model; user sees degraded loop/no tool access",
+      "Temporary limit (429 / Retry-After) treated as billing failure"
+    ]
+  },
+  "constraints": [
+    "Temporary limits (429 / token pool exhaustion / Retry-After) must never mark a provider/auth-profile as billing-disabled.",
+    "Cooldown must be correctly scoped: model-scoped exhaustion may cool down only that model, while allowing same-provider fallbacks on the same credential.",
+    "Provider/auth-profile cooldown must be distinct from billing-disabled and only triggered by true billing/credential failure signals."
+  ],
+  "knobs": [
+    "cooldown_scope (model|provider|profile)",
+    "cooldown_duration_seconds",
+    "max_retry_elapsed_seconds",
+    "max_retries",
+    "honor Retry-After",
+    "failover_chain_order (model then provider)"
+  ],
+  "verification": [
+    "Configure primary=anthropic/claude-opus-4-6 and fallbacks=[anthropic/claude-sonnet-4-6, ...] on a Max plan; induce Opus pool exhaustion (429).",
+    "Before fix: observe auth profile enters billing-disabled/cooldown and Sonnet is skipped.",
+    "After fix: on 429/token exhaustion, advance to Sonnet using same auth profile; do not mark billing-disabled; ensure successful response from fallback.",
+    "Add an automated test that simulates a model-scoped 429/token-exhaustion error and asserts: decision=advance_model and cooldown applies only to the exhausted model."
+  ],
+  "notes": "This is a classic error classification + cooldown scoping bug: model-level temporary limits are being escalated to provider/profile billing failure, producing silent total failover degradation."
+}
