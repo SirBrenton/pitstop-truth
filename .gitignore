@@ -1,0 +1,8 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# local ingest output
+receipts/_ingest/
+.DS_Store
