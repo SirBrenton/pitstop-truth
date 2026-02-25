@@ -51,8 +51,68 @@ If it wouldn’t help a different team six months from now, don’t capture
 ## Structure
 
 - `index.json` — machine entrypoint (registry of receipts)
-- `schemas/receipt.v0.json` — JSON schema for receipts
-- `receipts/YYYY/MM/<receipt-id>/receipt.json` — one receipt per folder
+- `schemas/receipt.v0.json` — JSON schema for curated truth artifacts
+- `schemas/decision_event.v1.schema.json` — canonical execution receipt schema
+- `pitstop_truth/ingest.py` — JSONL ingest + `decision_event.v1` validation
+- `receipts/YYYY/MM/<receipt-id>/receipt.json` — one curated receipt per folder
+
+---
+
+## Two layers of receipts
+
+This repo works with **two distinct receipt types**:
+
+### 1) Execution receipts (`decision_event.v1`)
+
+Machine-emitted execution records (produced by **Pitstop Guard** in `pitstop-commons`) and consumable by `pitstop-scan`.
+
+- Schema: `schemas/decision_event.v1.schema.json`
+- Format: JSONL (one event per line)
+- Ingested here by: `pitstop_truth.ingest`
+
+These receipts capture runtime facts:
+
+- operation + endpoint
+- budget + retry envelope
+- outcome + error classification
+- latency + cost
+- policy decision
+
+They are **canonical and mechanical**, not editorial.
+
+Example ingest:
+
+```bash
+python -m pitstop_truth.ingest \
+  --in ../pitstop-commons/proto/receipts.run.jsonl \
+  --schema schemas/decision_event.v1.schema.json \
+  --out receipts/_ingest/receipts.jsonl
+  ```
+Execution receipts are append-only and may be high volume.
+
+### 2) Curated Truth Artifacts (receipt.v0)
+
+Human-authored, normalized reliability learnings.
+
+- Schema: `schemas/receipt.v0.json`
+- Stored as: `receipts/YYYY/MM/<id>/receipt.json`
+- Indexed via: `index.json`
+
+These receipts answer:
+
+**hazard → constraints → knobs → verification**
+
+They are editorial and high-signal.
+
+#### In practice:
+
+- Many execution receipts may roll up into a single curated truth artifact.
+- Truth artifacts describe the generalizable lesson.
+
+#### Schema enforcement:
+
+- decision_event.v1 is validated via jsonschema during ingest.
+- receipt.v0 validation is minimal for now (JSON syntax + contract discipline).
 
 ## Receipt contract (v0)
 
@@ -80,7 +140,11 @@ A receipt is a single JSON file that conforms to `schemas/receipt.v0.json`.
 
 Schema: `schemas/receipt.v0.json`
 
-> Schema enforcement tooling not wired yet; for now we validate JSON syntax and keep the contract tight.
+```md
+Schema enforcement:
+- `decision_event.v1` is validated via `jsonschema` during ingest.
+- `receipt.v0` validation tooling is minimal for now (JSON syntax + contract discipline).
+```
 
 ## Adding a new receipt (daily workflow)
 
