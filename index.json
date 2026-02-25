@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-02-25T14:53:32Z",
+  "updated_at": "2026-02-25T23:11:36Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -175,6 +175,31 @@
         "retry_max_elapsed"
       ],
       "path": "receipts/2026/02/PT-2026-02-25-github_issue-spotdl-429-retryafter-skipcheck/receipt.json"
+    },
+    {
+      "id": "PT-2026-02-25-github_issue-warden-groq-429-retry-after-ignored",
+      "date": "2026-02-25",
+      "hazard_class": [
+        "rate_limit_429",
+        "retry_after_ignored",
+        "cooldown_missing",
+        "retry_budget_waste"
+      ],
+      "source_url": "https://github.com/alperduzgun/warden-core/issues/192",
+      "repo": "alperduzgun/warden-core",
+      "signals": [
+        "HTTP 429 from Groq",
+        "Retry-After present (e.g. 183s)",
+        "handler ignores Retry-After header",
+        "fallback thrash per batch"
+      ],
+      "knobs": [
+        "respect_retry_after",
+        "cooldown_until_timestamp",
+        "cooldown_key_scope",
+        "retry_max_elapsed"
+      ],
+      "path": "receipts/2026/02/PT-2026-02-25-github_issue-warden-groq-429-retry-after-ignored/receipt.json"
     }
   ]
 }

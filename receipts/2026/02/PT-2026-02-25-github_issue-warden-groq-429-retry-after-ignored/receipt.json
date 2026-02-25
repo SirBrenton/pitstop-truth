@@ -1,0 +1,45 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-02-25-github_issue-warden-groq-429-retry-after-ignored",
+  "created_at": "2026-02-25T00:00:00Z",
+  "source": {
+    "kind": "github_issue",
+    "url": "https://github.com/alperduzgun/warden-core/issues/192",
+    "repo": "alperduzgun/warden-core",
+    "issue_or_pr": "192"
+  },
+  "hazard": {
+    "class": [
+      "rate_limit_429",
+      "retry_after_ignored",
+      "cooldown_missing",
+      "retry_budget_waste"
+    ],
+    "summary": "Provider returns 429 with Retry-After but client ignores header and continues calling, wasting retries and thrashing fallback.",
+    "signals": [
+      "HTTP 429 from Groq",
+      "Retry-After header present (e.g. 183s)",
+      "429 handler does not read e.response.headers['retry-after']",
+      "fallback to smart tier; next batch retries Groq immediately; repeat"
+    ]
+  },
+  "constraints": [
+    "If response includes Retry-After, the client MUST honor it (sleep or short-circuit) before making another call to that provider.",
+    "Rate limit cooldown MUST be scoped to the correct key (provider + model + org/project/api key as applicable), not global across unrelated traffic.",
+    "Retry attempts MUST be budgeted so repeated 429s cannot burn the full retry envelope without waiting."
+  ],
+  "knobs": [
+    "cooldown_seconds_from_retry_after",
+    "cooldown_key_scope (provider/model/tenant)",
+    "max_retries_per_provider",
+    "max_elapsed_seconds",
+    "fallback_policy (when to failover vs wait)",
+    "concurrency_cap_per_provider"
+  ],
+  "verification": [
+    "Unit test: simulate httpx.HTTPStatusError(429) with Retry-After=183; assert next send_async() makes no HTTP call until time passes.",
+    "Integration test: run N batches; confirm Groq is skipped during cooldown and fallback is not thrashed each batch.",
+    "Telemetry: emit and log groq_rate_limited_until and cooldown_key; verify Scan can attribute clustered 429s to a single cooldown event."
+  ],
+  "notes": "Fix sketch: read Retry-After in groq.py 429 handler, propagate as structured metadata, store _rate_limited_until on GroqClient, and short-circuit send_async() during cooldown."
+}
