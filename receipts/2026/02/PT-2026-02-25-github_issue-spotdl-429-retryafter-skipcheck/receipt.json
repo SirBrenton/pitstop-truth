@@ -1,0 +1,48 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-02-25-github_issue-spotdl-429-retryafter-skipcheck",
+  "created_at": "2026-02-25T00:00:00Z",
+  "source": {
+    "url": "https://github.com/spotDL/spotify-downloader/issues/2461",
+    "kind": "github_issue",
+    "repo": "spotDL/spotify-downloader",
+    "issue_or_pr": "2461"
+  },
+  "hazard": {
+    "class": ["rate_limit_429", "retry_budget_exhausted", "restart_rework_loop"],
+    "summary": "Batch download hits 429 and exhausts retries because metadata calls occur before skip-check and Retry-After pacing is not honored.",
+    "signals": [
+      "http status: 429",
+      "Max Retries, reason: too many 429 error responses",
+      "threads=1 helps but still fails",
+      "≈3 API calls per song",
+      "metadata reinit before skip check",
+      "respect Retry-After",
+      "exponential backoff discussion"
+    ]
+  },
+  "constraints": [
+    "429 must be treated as a pacing signal and honor Retry-After when present.",
+    "Skip/existence check must occur before upstream metadata fetch.",
+    "Retries must have a bounded envelope (max_elapsed or max_attempts).",
+    "Concurrency must be capped relative to upstream quota."
+  ],
+  "knobs": [
+    "concurrency_cap",
+    "retry_max_attempts",
+    "retry_max_elapsed",
+    "backoff_base_ms",
+    "backoff_max_ms",
+    "backoff_jitter",
+    "respect_retry_after",
+    "metadata_cache_ttl"
+  ],
+  "verification": [
+    "Reproduce large playlist batch and observe 429 failure.",
+    "Enable Retry-After honoring + exponential backoff and confirm system slows instead of crashing.",
+    "Move skip-check before metadata reinit and confirm restart does not re-trigger upstream calls.",
+    "Measure requests/minute to confirm rate stays within upstream quota."
+  ],
+  "notes": "Root cause discussion quantifies request volume and identifies metadata reinit ordering bug. Concurrency reduction mitigates but does not solve pacing correctness.",
+  "tags": ["spotify", "429", "retry-after", "batch", "concurrency"]
+}
