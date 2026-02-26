@@ -46,7 +46,7 @@ A candidate is receipt-worthy only if it meets **all** of:
 
 Radar can surface candidates; **this repo is the final filter.**
 
-If it wouldn’t help a different team six months from now, don’t capture 
+If it wouldn’t help a different team six months from now, don’t capture it.
 
 ## Structure
 
@@ -95,7 +95,7 @@ Execution receipts are append-only and may be high volume.
 Human-authored, normalized reliability learnings.
 
 - Schema: `schemas/receipt.v0.json`
-- Stored as: `receipts/YYYY/MM/<id>/receipt.json`
+- Stored as: `receipts/YYYY/MM/<receipt-id>/receipt.json`
 - Indexed via: `index.json`
 
 These receipts answer:
@@ -111,8 +111,8 @@ They are editorial and high-signal.
 
 #### Schema enforcement:
 
-- decision_event.v1 is validated via jsonschema during ingest.
-- receipt.v0 validation is minimal for now (JSON syntax + contract discipline).
+- `decision_event.v1` is validated via `jsonschema` during ingest (`pitstop_truth/ingest.py`).
+- `receipt.v0` is validated via `scripts/validate_receipts.py` (jsonschema over `receipts/**/receipt.json`).
 
 ## Receipt contract (v0)
 
@@ -120,30 +120,67 @@ A receipt is a single JSON file that conforms to `schemas/receipt.v0.json`.
 
 ### Required fields
 - `schema_version`: must be `"receipt.v0"`
-- `id`: `PT-YYYY-MM-DD-<slug>` (lowercase a–z / 0–9 / `-`, slug len ≥ 8)
-- `created_at`: ISO 8601 datetime (UTC recommended, `...Z`)
+
+- `id`: `PT-YYYY-MM-DD-<slug> where <slug> is lowercase a–z / 0–9 / '-' and length ≥ 8.`
+  - `<slug>` must be lowercase `a–z / 0–9 / '-'`  
+  - minimum length ≥ 8 characters  
+  - **Convention:** prefix the slug with a source hint such as `github-issue-`, `github-pr-`, `log-`, `incident-`
+
+- `created_at`: ISO 8601 datetime (UTC recommended, e.g. `2026-02-26T07:31:39Z`)
+
 - `source`:
   - `url` (primary evidence)
   - `kind`: `github_issue | github_pr | log | incident_postmortem | other`
-  - optional: `repo`, `issue_or_pr`, plus any extra metadata (allowed)
+  - optional: `repo`, `issue_or_pr`, plus any additional metadata (allowed)
+
 - `hazard`:
-  - `class`: array of hazard class strings (e.g. `rate_limit_429`, `retry_budget_exhausted`)
+  - `class`: array of hazard class strings  
+    (e.g. `rate_limit_429`, `retry_budget_exhausted`)
   - `summary`: one-line description of the failure mode
-  - `signals`: machine-readable-ish strings extracted from evidence (error text, headers, “--parallel 1 fixes”, etc.)
+  - `signals`: array of machine-readable-ish strings extracted from evidence  
+    (error text, headers, log fragments, “--parallel 1 fixes”, etc.)
+
 - `constraints`: array of “must be true” guardrails that prevent recurrence
-- `knobs`: array of configurable controls (limits, backoff params, concurrency caps, etc.)
+
+- `knobs`: array of configurable controls  
+  (limits, backoff params, concurrency caps, driver flags, etc.)
+
 - `verification`: array of steps to prove mitigation worked
 
 ### Optional fields
-- `notes`: freeform context
-- `tags`: array of strings
+Optional fields may be omitted.
+
+- `notes`: freeform context (background, edge cases, why the mitigation mattered, etc.)
+
+- `tags`: array of strings for lightweight grouping  
+  (e.g. `ci`, `rate_limit`, `timeout`, `driver`, `control_plane`)
+
+- `mitigation_signature`: compact, comparable summary of the guardrail pattern  
+  Intended for clustering and deduplication across receipts.  
+  Typical structure:
+  - `hazards`: normalized hazard labels
+  - `constraints`: distilled guardrail invariants
+  - `knobs`: key control surfaces
+  - `anti_patterns`: common failure shapes this prevents
+
+- `routing_impact`: router / executor-facing implications of the hazard  
+  Describes how a runtime system should behave when this pattern is detected.  
+  May include:
+  - `default_action` (e.g. `cooldown_and_route_away`, `failfast_with_hint`)
+  - cooldown semantics or scope keys
+  - probe strategy guidance
+  - classification rules
+  - detection thresholds (log signatures, repeat counts, etc.)
 
 Schema: `schemas/receipt.v0.json`
 
-```md
 Schema enforcement:
-- `decision_event.v1` is validated via `jsonschema` during ingest.
-- `receipt.v0` validation tooling is minimal for now (JSON syntax + contract discipline).
+- `decision_event.v1` is validated via `jsonschema` during ingest (`pitstop_truth/ingest.py`).
+- `receipt.v0` is validated via `scripts/validate_receipts.py` (jsonschema across `receipts/**/receipt.json`).
+
+Run locally:
+```bash
+python3 scripts/validate_receipts.py
 ```
 
 ## Adding a new receipt (daily workflow)
@@ -154,14 +191,15 @@ Schema enforcement:
 DATE="YYYY-MM-DD"
 YYYY="${DATE%%-*}"
 MM="${DATE#*-}"; MM="${MM%%-*}"
-RID="PT-$DATE-<source>-<slug>"
+RID="PT-$DATE-<slug>"   # where slug starts with github-issue-... / github-pr-... etc
 mkdir -p "receipts/$YYYY/$MM/$RID"
 ```
 
 2. Add receipt.json in that folder and validate it locally:
 
 ```bash
-python3 -m json.tool "receipts/YYYY/MM/$RID/receipt.json" >/dev/null
+python3 scripts/validate_receipts.py
+python3 -m json.tool index.json >/dev/null
 ```
 
 3. Upsert it into index.json using the helper script:
@@ -181,7 +219,12 @@ python3 scripts/add_to_index.py \
   --knob "backoff_jitter"
 ```
 
-4. Validate + commit:
+4. Validate receipts + index (schema + JSON):
+```bash
+python3 scripts/validate_receipts.py && python3 -m json.tool index.json >/dev/null && echo "ok ✅"
+```
+
+5. Commit + push:
 
 ```bash
 python3 -m json.tool index.json >/dev/null
@@ -192,7 +235,7 @@ git push
 
 ## Conventions
 
-- IDs: PT-YYYY-MM-DD-<source>-<slug>
+- IDs: PT-YYYY-MM-DD-<slug> (slug convention: github-issue-..., github-pr-..., log-..., incident-...)
 - Immutability: receipts should be treated as immutable once published; if you must revise, add a new receipt or note a superseding receipt in notes.
 - Index stability: index.json is the canonical list for machines; paths are repo-relative.
 
