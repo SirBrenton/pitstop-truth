@@ -1,0 +1,95 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2025-12-13-github-issue-hedgehog-vlab-e1000-tx-hang-mitigation-drift",
+  "created_at": "2026-02-26T00:00:00Z",
+  "source": {
+    "kind": "github_issue",
+    "url": "https://github.com/githedgehog/fabricator/issues/1239",
+    "repo": "githedgehog/fabricator",
+    "issue_or_pr": 1239,
+    "evidence": [
+      "https://github.com/githedgehog/dataplane/actions/runs/20069038523/job/57568210055",
+      "https://github.com/githedgehog/fabricator/actions/runs/22223690014/job/64285643398",
+      "https://github.com/githedgehog/fabricator/actions/runs/22440124334/job/64980796487?pr=1485",
+      "https://github.com/githedgehog/fabricator/pull/1495",
+      "https://github.com/systemd/systemd/issues/33619"
+    ]
+  },
+  "hazard": {
+    "class": [
+      "ci_flake",
+      "timeout_deadline_exceeded",
+      "controlplane_unreachable",
+      "network_driver_tx_hang",
+      "mitigation_drift"
+    ],
+    "summary": "CI times out waiting for switches to become ready; root cause is control VM e1000 Tx Unit Hang causing control-plane reachability loss, while diagnostics fail via SSH timeouts; mitigation (disable offloads) regresses because settings reset on systemd-networkd reconfigure.",
+    "signals": [
+      "INF Switches status notReady=... repeated",
+      "ERR Failed to wait for ready err=\"waiting for ready: context deadline exceeded\"",
+      "WRN Some diagnostics collection failed ... (Connection timed out)",
+      "kernel: e1000 ... Detected Tx Unit Hang (control-1)",
+      "ethtool shows TSO/GSO/GRO unexpectedly ON during failing runs",
+      "systemd-networkd CHANGE resets offload settings; udev ethtool not applied on CHANGE events"
+    ]
+  },
+  "mitigation_signature": {
+    "hazards": [
+      "timeout_deadline_exceeded",
+      "network_driver_tx_hang",
+      "mitigation_drift"
+    ],
+    "constraints": [
+      "verify_guardrail_runtime",
+      "mitigation_must_persist_across_reconfigure",
+      "timeout_must_surface_root_cause_signals"
+    ],
+    "knobs": [
+      "nic_driver",
+      "offload_apply_hook",
+      "ci_failfast_on_offload_mismatch"
+    ],
+    "anti_patterns": [
+      "timeout_as_terminal_classification",
+      "oneshot_mitigation_resets_silently",
+      "diagnostics_fail_hides_root_cause"
+    ]
+  },
+  "routing_impact": {
+    "default_action": "fail_fast",
+    "cooldown_source": "none",
+    "cooldown_scope_key": "none",
+    "during_cooldown": {
+      "make_http_call": false,
+      "eligible_for_routing": true,
+      "emit_decision_event": true
+    },
+    "after_cooldown": {
+      "probe_strategy": "none",
+      "max_probe_qps": 0
+    }
+  },
+  "constraints": [
+    "Timeout classification MUST NOT be terminal when strong root-cause signals exist (e.g., Tx Unit Hang). The system MUST emit/retain root-cause hints alongside deadline exceeded.",
+    "Mitigations relying on OS/network configuration MUST be verified at runtime (guardrail must be persistent, not best-effort).",
+    "Diagnostics collection MUST degrade gracefully when SSH fails (console fallback or explicit diagnostics_unavailable classification), rather than burying root-cause evidence."
+  ],
+  "knobs": [
+    "ready_wait_timeout_seconds",
+    "retry_attempts",
+    "diagnostics_transport_priority (ssh|console)",
+    "ssh_connect_timeout_seconds",
+    "ci_failfast_on_offload_mismatch",
+    "nic_driver (e1000|virtio)",
+    "offload_disable_policy (which flags must be off)",
+    "offload_apply_hook (on networkd CHANGE events)"
+  ],
+  "verification": [
+    "Detection: classifier triggers when 'Switches status notReady=' repeats >=15 times and job ends with 'context deadline exceeded'.",
+    "Root-cause confirmation: show-tech/dmesg contains 'e1000 ... Detected Tx Unit Hang' on control VM for failing runs.",
+    "Guardrail proof: add CI step early to assert `ethtool -k <iface>` matches expected OFF set; fail loudly with diff if not.",
+    "Persistence: ensure offload disable re-applies on network reconfigure (e.g., networkd-dispatcher or equivalent); verify by re-reading ethtool after reconfigure.",
+    "Outcome: recurrence rate of this signature drops materially; if it recurs, logs classify it as tx_hang/controlplane_unreachable within minutes."
+  ],
+  "notes": "Key lesson: mitigation drift. Disabling offloads once is insufficient if systemd-networkd resets settings on CHANGE events. Add runtime verification + persistent reapply hook, and ensure timeout errors preserve root-cause hints."
+}
