@@ -1,0 +1,95 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-02-26-github-issue-claude-code-25805-429-throughput-vs-quota",
+  "created_at": "2026-02-26T21:24:45Z",
+  "source": {
+    "kind": "github_issue",
+    "url": "https://github.com/anthropics/claude-code/issues/25805",
+    "repo": "anthropics/claude-code",
+    "issue_or_pr": 25805
+  },
+  "hazard": {
+    "class": [
+      "rate_limit_429",
+      "rate_limit_taxonomy_ambiguous",
+      "throughput_vs_quota_confusion",
+      "insufficient_retry_guidance"
+    ],
+    "summary": "CLI surfaces 429 as a generic “API Error” without distinguishing throughput vs usage/quota limits or providing actionable retry/cap guidance, causing avoidable thrash and slow diagnosis.",
+    "signals": [
+      "User-reported: rate limit errors show \"API Error\"",
+      "Missing distinction: throughput (rpm/tpm) vs usage/quota",
+      "Missing/unclear retry semantics (Retry-After / backoff guidance)",
+      "Need: concurrency cap guidance + better logging/traceability"
+    ]
+  },
+  "constraints": [
+    "429 handling MUST distinguish limit type when possible (throughput vs quota) and surface the classification to the user.",
+    "If Retry-After is present, client MUST respect it and avoid re-hitting the same provider/model until cooldown expires.",
+    "Retries MUST be bounded by max elapsed / attempt caps; avoid infinite or fast-loop retry behavior.",
+    "Client SHOULD provide an actionable hint: reduce concurrency, enable backoff+jitter, and include a stable request/attempt identifier in logs."
+  ],
+  "knobs": [
+    "concurrency_cap",
+    "backoff_base_ms",
+    "backoff_max_ms",
+    "backoff_jitter",
+    "retry_max_elapsed_ms",
+    "max_attempts",
+    "cooldown_scope_key (provider:model:tenant)",
+    "retry_after_respect (bool)",
+    "log_verbosity / include_attempt_id (bool)"
+  ],
+  "verification": [
+    "Repro: induce 429s (burst requests) and confirm error output labels the limit type (throughput vs quota) when possible.",
+    "If Retry-After is returned, confirm the client sleeps/cools down and does not immediately re-hit the same endpoint.",
+    "Confirm concurrency cap guidance is present (and ideally configurable) and reduces 429 recurrence under load.",
+    "Confirm retries obey max_elapsed / max_attempts and produce a clear terminal error when exhausted.",
+    "Confirm logs include request/attempt identifiers sufficient to correlate user reports with rate-limit events."
+  ],
+  "mitigation_signature": {
+    "hazards": [
+      "rate_limit_429",
+      "rate_limit_taxonomy_ambiguous"
+    ],
+    "constraints": [
+      "classify_429_kind",
+      "respect_retry_after",
+      "bounded_retries"
+    ],
+    "knobs": [
+      "concurrency_cap",
+      "retry_max_elapsed_ms",
+      "backoff_base_ms",
+      "backoff_jitter",
+      "cooldown_scope_key"
+    ],
+    "anti_patterns": [
+      "generic_429_error_message",
+      "immediate_rehit_after_429",
+      "fallback_or_retry_thrash"
+    ]
+  },
+  "routing_impact": {
+    "default_action": "cooldown_and_route_away",
+    "cooldown_source": "retry_after_header",
+    "cooldown_scope_key": "provider:model:tenant",
+    "during_cooldown": {
+      "make_http_call": false,
+      "eligible_for_routing": false,
+      "emit_decision_event": true
+    },
+    "after_cooldown": {
+      "probe_strategy": "single_flight",
+      "max_probe_qps": 1
+    }
+  },
+  "tags": [
+    "rate_limit",
+    "429",
+    "cli",
+    "retry",
+    "backoff",
+    "concurrency"
+  ]
+}
