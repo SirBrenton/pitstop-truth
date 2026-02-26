@@ -155,7 +155,7 @@
       "path": "receipts/2026/02/PT-2026-02-19-openclaw-20316-failover-429-billing-misclass-cooldown/receipt.json"
     },
     {
-      "id": "PT-2026-02-25-github_issue-spotdl-429-retryafter-skipcheck",
+      "id": "PT-2026-02-25-github-issue-spotdl-429-retryafter-skipcheck",
       "date": "2026-02-25",
       "hazard_class": [
         "rate_limit_429",
@@ -177,7 +177,7 @@
       "path": "receipts/2026/02/PT-2026-02-25-github_issue-spotdl-429-retryafter-skipcheck/receipt.json"
     },
     {
-      "id": "PT-2026-02-25-github_issue-warden-groq-429-retry-after-ignored",
+      "id": "PT-2026-02-25-github-issue-warden-groq-429-retry-after-ignored",
       "date": "2026-02-25",
       "hazard_class": [
         "rate_limit_429",

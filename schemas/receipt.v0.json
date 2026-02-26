@@ -46,6 +46,58 @@
       "additionalProperties": false
     },
 
+        "mitigation_signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hazards": { "type": "array", "items": { "type": "string" } },
+        "constraints": { "type": "array", "items": { "type": "string" } },
+        "knobs": { "type": "array", "items": { "type": "string" } },
+        "anti_patterns": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "routing_impact": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "default_action": {
+          "type": "string",
+          "enum": [
+            "cooldown_and_route_away",
+            "retry_with_budget",
+            "fail_fast",
+            "defer_and_probe",
+            "quarantine_provider"
+          ]
+        },
+        "cooldown_source": {
+          "type": "string",
+          "enum": ["retry_after_header", "fixed_seconds", "server_hint", "none"]
+        },
+        "cooldown_scope_key": { "type": "string" },
+
+        "during_cooldown": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "make_http_call": { "type": "boolean" },
+            "eligible_for_routing": { "type": "boolean" },
+            "emit_decision_event": { "type": "boolean" }
+          }
+        },
+
+        "after_cooldown": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "probe_strategy": { "type": "string", "enum": ["single_flight", "limited_qps", "none"] },
+            "max_probe_qps": { "type": "number", "minimum": 0 }
+          }
+        }
+      }
+    },
+
     "constraints": {
       "type": "array",
       "items": { "type": "string" }
