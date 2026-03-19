@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-02-26T15:27:32Z",
+  "updated_at": "2026-03-19T21:41:44Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -223,6 +223,28 @@
         "ci_failfast_on_offload_mismatch"
       ],
       "path": "receipts/2025/12/PT-2025-12-13-github-issue-hedgehog-vlab-e1000-tx-hang-mitigation-drift/receipt.json"
+    },
+    {
+      "id": "PT-2026-03-19-github-issue-garmin-sso-429-edge-block-global",
+      "date": "2026-03-19",
+      "hazard_class": [
+        "rate_limit_429",
+        "external_auth_surface_block",
+        "client_bug_misclassification"
+      ],
+      "source_url": "https://github.com/matin/garth/issues/217",
+      "repo": "matin/garth",
+      "signals": [
+        "HTTP/1.1 429 Too Many Requests",
+        "curl reproduces failure without app code",
+        "Cloudflare edge present"
+      ],
+      "knobs": [
+        "health_check_endpoint",
+        "fresh_login_circuit_breaker",
+        "login_probe_rate_limit"
+      ],
+      "path": "receipts/2026/03/PT-2026-03-19-github-issue-garmin-sso-429-edge-block-global/receipt.json"
     }
   ]
 }

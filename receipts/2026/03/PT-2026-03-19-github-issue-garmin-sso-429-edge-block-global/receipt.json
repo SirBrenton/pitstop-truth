@@ -1,0 +1,90 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-03-19-github-issue-garmin-sso-429-edge-block-global",
+  "created_at": "2026-03-19T20:00:00Z",
+  "source": {
+    "url": "https://github.com/matin/garth/issues/217",
+    "kind": "github_issue",
+    "repo": "matin/garth",
+    "issue_or_pr": 217
+  },
+  "hazard": {
+    "class": [
+      "rate_limit_429",
+      "upstream_edge_block",
+      "misclassified_client_failure"
+    ],
+    "summary": "Persistent 429 on Garmin SSO login reproduces from plain curl across regions, indicating upstream edge or abuse-policy blocking rather than a client-side retry/backoff bug.",
+    "signals": [
+      "HTTP/1.1 429 Too Many Requests",
+      "curl -I https://sso.garmin.com/mobile/api/login",
+      "Server: cloudflare",
+      "CF-RAY present",
+      "persists even from browser/curl without any code",
+      "multiple regions affected",
+      "existing saved tokens still work",
+      "fresh login attempts fail immediately"
+    ]
+  },
+  "constraints": [
+    "If a 429 reproduces from a minimal external probe outside the client, classify it as upstream availability or edge-policy failure before changing library retry logic.",
+    "Authentication flows must distinguish client misuse from upstream login-surface unavailability.",
+    "Login probes must be minimized to avoid amplifying possible edge or abuse-policy blocks."
+  ],
+  "knobs": [
+    "health_check_endpoint",
+    "login_probe_rate",
+    "retry_disable_on_external_429",
+    "circuit_breaker_for_fresh_login"
+  ],
+  "verification": [
+    "Reproduce the 429 from a minimal probe such as curl against the login endpoint without application code.",
+    "Confirm whether the failure occurs across multiple regions, networks, or Cloudflare edges.",
+    "Verify that existing saved-token flows still succeed while fresh login fails.",
+    "After mitigation or service recovery, verify that fresh login succeeds without changes to client retry logic."
+  ],
+  "notes": "The evidence suggests this is not a local library implementation bug: the same 429 is returned from plain curl with no authentication headers, across multiple countries/providers, and persists across endpoint/version changes. This makes it a reusable example of external 429 misread as a client-side retry problem.",
+  "tags": [
+    "429",
+    "cloudflare",
+    "sso",
+    "availability",
+    "classification",
+    "external-dependency"
+  ],
+  "mitigation_signature": {
+    "hazards": [
+      "rate_limit_429",
+      "upstream_edge_block",
+      "misclassified_client_failure"
+    ],
+    "constraints": [
+      "probe externally before patching retry logic",
+      "separate upstream availability failures from client retry bugs"
+    ],
+    "knobs": [
+      "health_check_endpoint",
+      "login_probe_rate",
+      "circuit_breaker_for_fresh_login"
+    ],
+    "anti_patterns": [
+      "treating all 429s as local cooldown bugs",
+      "changing client retries before validating upstream behavior",
+      "using login endpoints as aggressive health checks"
+    ]
+  },
+  "routing_impact": {
+    "default_action": "defer_and_probe",
+    "cooldown_source": "none",
+    "cooldown_scope_key": "upstream_auth_surface",
+    "during_cooldown": {
+      "make_http_call": false,
+      "eligible_for_routing": false,
+      "emit_decision_event": true
+    },
+    "after_cooldown": {
+      "probe_strategy": "single_flight",
+      "max_probe_qps": 0.1
+    }
+  }
+}
