@@ -1,0 +1,106 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-03-20-github-issue-openclaw-50866-telegram-429-crash-spiral",
+  "created_at": "2026-03-20T18:00:00Z",
+  "source": {
+    "kind": "github_issue",
+    "url": "https://github.com/openclaw/openclaw/issues/50866",
+    "repo": "openclaw/openclaw",
+    "issue_or_pr": 50866
+  },
+  "hazard": {
+    "class": [
+      "rate_limit_429",
+      "retry_after_ignored",
+      "retry_amplification",
+      "recovery_burst_amplification",
+      "missing_delivery_backpressure"
+    ],
+    "summary": "Concurrent recovery from upstream overload causes a burst of Telegram sends; the delivery retry path ignores Telegram retry_after and amplifies the burst into a crash spiral.",
+    "signals": [
+      "Telegram 429: Too Many Requests: retry after 40",
+      "delivery recovery retries immediately within milliseconds",
+      "lane wait exceeded: 100-195 seconds",
+      "stale session locks (dead-pid)",
+      "gateway crashes and restarts",
+      "missed cron jobs fire simultaneously after restart",
+      "Anthropic overloaded_error precedes downstream Telegram burst"
+    ]
+  },
+  "constraints": [
+    "When a downstream transport returns 429 with retry_after, the retry path MUST wait at least that duration before retrying.",
+    "Outbound delivery to a shared chat/channel MUST be coordinated by a global or per-chat send queue rather than independent concurrent retries.",
+    "Recovery from upstream overload MUST NOT flush queued completions as an unbounded burst into downstream transports.",
+    "Restart recovery for missed cron jobs MUST stagger or serialize replay to avoid burst amplification.",
+    "Backpressure between generation and delivery stages MUST prevent new upstream work from being generated faster than downstream delivery can drain."
+  ],
+  "knobs": [
+    "telegram_retry_after_seconds",
+    "per_chat_send_rate_limit",
+    "delivery_queue_max_burst",
+    "max_retry_attempts",
+    "max_retry_elapsed_seconds",
+    "cron_replay_stagger_seconds",
+    "agent_max_concurrent",
+    "delivery_circuit_breaker_cooldown_seconds"
+  ],
+  "verification": [
+    "Simulate Telegram 429 with retry_after=40 and confirm no retry is attempted before the cooldown expires.",
+    "Run multiple concurrent agent/crons that complete simultaneously and verify outbound Telegram sends are spaced by the global/per-chat queue.",
+    "Restart the gateway with multiple missed cron jobs and verify replay is staggered or serialized rather than burst-fired.",
+    "Observe that lane wait times, stale locks, and restart loops do not recur under the same overload/recovery scenario.",
+    "Confirm backpressure pauses or slows upstream request generation when the Telegram delivery queue exceeds a configured threshold."
+  ],
+  "notes": "This issue shows a full cascade, not a single retry bug: upstream Anthropic overload clears, queued work flushes, Telegram rate-limits the burst, retry_after is ignored, retries amplify pressure, stale locks accumulate, the gateway restarts, and missed cron jobs replay simultaneously to restart the cycle. The workaround confirms the mechanism: manually matching retry delay to Telegram's retry_after, reducing concurrency, and staggering cron schedules reduces the spiral but does not replace the architectural fixes.",
+  "tags": [
+    "429",
+    "retry-after",
+    "telegram",
+    "multi-agent",
+    "backpressure",
+    "cron",
+    "recovery",
+    "retry-amplification"
+  ],
+  "mitigation_signature": {
+    "hazards": [
+      "rate_limit_429",
+      "retry_after_ignored",
+      "retry_amplification",
+      "recovery_burst_amplification",
+      "missing_delivery_backpressure"
+    ],
+    "constraints": [
+      "respect downstream retry_after",
+      "coordinate outbound sends through a queue",
+      "stagger replayed workload after restart",
+      "apply backpressure across stages"
+    ],
+    "knobs": [
+      "per_chat_send_rate_limit",
+      "max_retry_elapsed_seconds",
+      "cron_replay_stagger_seconds",
+      "delivery_circuit_breaker_cooldown_seconds"
+    ],
+    "anti_patterns": [
+      "independent retries against a shared rate-limited channel",
+      "burst flush after upstream recovery",
+      "immediate retry after downstream 429",
+      "replaying missed cron jobs all at once after restart"
+    ]
+  },
+  "routing_impact": {
+    "default_action": "cooldown_and_route_away",
+    "cooldown_source": "server_hint",
+    "cooldown_scope_key": "transport:telegram:chat",
+    "during_cooldown": {
+      "make_http_call": false,
+      "eligible_for_routing": false,
+      "emit_decision_event": true
+    },
+    "after_cooldown": {
+      "probe_strategy": "single_flight",
+      "max_probe_qps": 0.2
+    }
+  }
+}
