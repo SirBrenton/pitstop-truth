@@ -1,0 +1,42 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-03-21-github-continue-dev-429-cap-wait-missing",
+  "created_at": "2026-03-21T15:00:00Z",
+  "source": {
+    "url": "https://github.com/continuedev/continue/blob/main/core/util/withExponentialBackoff.ts",
+    "kind": "github_pr",
+    "repo": "continuedev/continue",
+    "notes": "Discovered via pitstop-check@0.1.1 static scan. Related: Feb 2026 fix by RomneyDa for embedded 429 detection in Gemini/VertexAI."
+  },
+  "hazard": {
+    "class": ["rate_limit_429"],
+    "summary": "Exponential backoff utility collapses WAIT and CAP into single retry path — no Retry-After consultation, all 429s treated as retryable",
+    "signals": [
+      "core/util/withExponentialBackoff.ts:18 — All 429s treated as retryable",
+      "extensions/cli/src/util/exponentialBackoff.ts:51 — 429 handled without Retry-After",
+      "Gemini 429 detection fixed upstream Feb 2026 but backoff layer unchanged"
+    ]
+  },
+  "constraints": [
+    "Retry-After header must be consulted before retrying on 429",
+    "WAIT (transient, respect Retry-After) and CAP (concurrency limit) must be distinguished",
+    "Retry loop must have max elapsed bound"
+  ],
+  "knobs": [
+    "retryAfterMs — read from response header before backoff calculation",
+    "maxElapsedMs — hard cap on total retry window",
+    "concurrencyCap — limit parallel retries under shared rate limit"
+  ],
+  "verification": [
+    "Run pitstop-check against core/util and extensions/cli/src/util — should return zero warnings",
+    "Under concurrent load, verify 429 response with Retry-After header causes all workers to pause for header duration before retry",
+    "Confirm CAP classification routes to concurrency reduction, not simple backoff"
+  ],
+  "tags": ["rate_limit", "429", "retry", "ai-coding-assistant", "llm-provider"],
+  "mitigation_signature": {
+    "hazards": ["rate_limit_429"],
+    "constraints": ["respect_retry_after", "cap_vs_wait_distinction"],
+    "knobs": ["retryAfterMs", "maxElapsedMs", "concurrencyCap"],
+    "anti_patterns": ["blanket_429_retry", "retry_after_ignored_under_concurrency"]
+  }
+}

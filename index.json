@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-03-20T19:38:19Z",
+  "updated_at": "2026-03-21T16:20:29Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -268,6 +268,25 @@
         "max_retry_elapsed_seconds"
       ],
       "path": "receipts/2026/03/PT-2026-03-20-github-issue-openclaw-50866-telegram-429-crash-spiral/receipt.json"
+    },
+    {
+      "id": "PT-2026-03-21-github-continue-dev-429-cap-wait-missing",
+      "date": "2026-03-21",
+      "hazard_class": [
+        "rate_limit_429"
+      ],
+      "source_url": "https://github.com/continuedev/continue/blob/main/core/util/withExponentialBackoff.ts",
+      "repo": "continuedev/continue",
+      "signals": [
+        "All 429s treated as retryable \u2014 CAP vs WAIT not distinguished",
+        "429 handled without Retry-After"
+      ],
+      "knobs": [
+        "retryAfterMs",
+        "maxElapsedMs",
+        "concurrencyCap"
+      ],
+      "path": "receipts/2026/03/PT-2026-03-21-github-continue-dev-429-cap-wait-missing/receipt.json"
     }
   ]
 }
