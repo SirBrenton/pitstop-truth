@@ -1,0 +1,106 @@
+{
+  "schema": "pitstop-capability.v0",
+  "name": "pitstop-truth",
+  "version": "0.1.0",
+  "description": "Machine-readable corpus of AI/API execution failure patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, and concurrency amplification — classified, verified, and cross-referenced across production systems.",
+  "capability": "execution_failure_classification",
+  "thesis": "When AI pipelines hit rate limits and timeouts, they often respond incorrectly — amplifying pressure instead of absorbing it. This corpus documents how, where, and why.",
+  "corpus": {
+    "receipts": 16,
+    "hazard_classes": [
+      "rate_limit_429",
+      "timeout_deadline",
+      "retry_budget_exhausted"
+    ],
+    "repos_analyzed": [
+      "openclaw/openclaw",
+      "continuedev/continue",
+      "BerriAI/litellm",
+      "zulip/zulip",
+      "vercel/ai",
+      "anthropics/claude-code",
+      "svix/svix-webhooks"
+    ],
+    "date_range": {
+      "earliest": "2025-07-15",
+      "latest": "2026-03-21"
+    }
+  },
+  "query": {
+    "index": "https://raw.githubusercontent.com/SirBrenton/pitstop-truth/main/index.json",
+    "schema": "https://raw.githubusercontent.com/SirBrenton/pitstop-truth/main/schemas/receipt.v0.json",
+    "capability": "https://raw.githubusercontent.com/SirBrenton/pitstop-truth/main/capability.json"
+  },
+  "patterns": [
+    {
+      "id": "retry-after-ignored-under-concurrency",
+      "hazard": "rate_limit_429",
+      "summary": "Client retries on 429 without consulting Retry-After header. Under concurrency, all workers retry simultaneously, amplifying pressure instead of absorbing it.",
+      "classification": "WAIT mishandled as immediate retry",
+      "confirmed_in": [
+        "openclaw/openclaw",
+        "continuedev/continue",
+        "BerriAI/litellm",
+        "zulip/zulip",
+        "vercel/ai"
+      ],
+      "canonical_receipt": "PT-2026-03-21-github-openclaw-venice-models-429-retry-after-unwired",
+      "fix": "Consult Retry-After header before retrying. Use header value as floor for retry delay."
+    },
+    {
+      "id": "correct-primitive-unwired-callers",
+      "hazard": "rate_limit_429",
+      "summary": "Retry utility supports Retry-After correctly but call sites never pass the required parameter. Correct behavior is unreachable.",
+      "classification": "Silent omission at call site",
+      "confirmed_in": [
+        "openclaw/openclaw",
+        "continuedev/continue"
+      ],
+      "canonical_receipt": "PT-2026-03-21-github-continue-dev-429-cap-wait-missing",
+      "fix": "Wire retryAfterMs at every call site that handles 429 responses."
+    },
+    {
+      "id": "quota-exhaustion-misclassified-as-transient",
+      "hazard": "rate_limit_429",
+      "summary": "Retry-After values above threshold fall back to exponential backoff. Quota exhaustion (STOP) treated as transient rate limit (WAIT). Retries cannot succeed until quota resets.",
+      "classification": "CAP vs WAIT vs STOP not distinguished",
+      "confirmed_in": [
+        "vercel/ai"
+      ],
+      "canonical_receipt": "PT-2026-03-21-github-vercel-ai-sdk-429-retry-after-gap",
+      "fix": "Classify Retry-After > configurable threshold as STOP. Do not retry. Surface quota exhaustion explicitly."
+    },
+    {
+      "id": "throughput-vs-quota-confusion",
+      "hazard": "rate_limit_429",
+      "summary": "Single error message surfaces for both throughput limits (requests/min) and quota limits (weekly/session). Users cannot take correct next action.",
+      "classification": "Error taxonomy collapse",
+      "confirmed_in": [
+        "anthropics/claude-code"
+      ],
+      "canonical_receipt": "PT-2026-02-26-github-issue-claude-code-25805-429-throughput-vs-quota",
+      "fix": "Distinguish throughput (WAIT: retry in Xs) from quota (STOP: resets at T). Surface correct signal to caller."
+    }
+  ],
+  "detection": {
+    "tool": "pitstop-check",
+    "npm": "pitstop-check",
+    "version": "0.1.1",
+    "command": "npx pitstop-check ./src",
+    "languages": ["TypeScript", "JavaScript"],
+    "repo": "https://github.com/SirBrenton/pitstop-check",
+    "rules": [
+      "429 handled without Retry-After",
+      "All 429s treated as retryable — CAP vs WAIT not distinguished",
+      "No max elapsed bound — retries may be unbounded"
+    ]
+  },
+  "classification_model": {
+    "WAIT": "Transient rate limit. Retry after Retry-After duration. Pressure will subside.",
+    "CAP": "Concurrency or throughput limit. Reduce parallel requests. Do not retry immediately.",
+    "STOP": "Quota exhaustion or terminal error. Do not retry. Surface to caller. Wait for reset."
+  },
+  "contact": "brentondwilliams@gmail.com",
+  "license": "Apache-2.0",
+  "last_updated": "2026-03-21"
+}

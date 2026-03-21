@@ -56,6 +56,19 @@ If it wouldn’t help a different team six months from now, don’t capture it.
 - `pitstop_truth/ingest.py` — JSONL ingest + `decision_event.v1` validation
 - `receipts/YYYY/MM/<receipt-id>/receipt.json` — one curated receipt per folder
 
+## Machine-readable capability manifest
+
+`capability.json` — structured summary of this corpus for programmatic discovery.
+
+Contains:
+- corpus statistics (receipt count, hazard classes, repos analyzed)
+- documented failure patterns with canonical receipts
+- detection tool reference (pitstop-check)
+- classification model (WAIT / CAP / STOP)
+- query URLs for index and schema
+
+Intended for agents and tools that need to understand what this corpus contains without parsing individual receipts.
+
 ---
 
 ## Two layers of receipts
