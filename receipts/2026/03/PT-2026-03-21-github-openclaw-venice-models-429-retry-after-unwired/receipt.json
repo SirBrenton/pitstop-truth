@@ -1,0 +1,45 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-03-21-github-openclaw-venice-models-429-retry-after-unwired",
+  "created_at": "2026-03-21T20:00:00Z",
+  "source": {
+    "url": "https://github.com/openclaw/openclaw/issues/49811",
+    "kind": "github_issue",
+    "repo": "openclaw/openclaw",
+    "issue_or_pr": 49811,
+    "notes": "Discovered via pitstop-check@0.1.1. The retry primitive in src/infra/retry.ts supports retryAfterMs correctly. Callers in src/agents/venice-models.ts and others do not pass retryAfterMs. When Venice API returns Retry-After: 600, client ignores it and retries on own schedule causing 10-minute timeout block."
+  },
+  "hazard": {
+    "class": ["rate_limit_429"],
+    "summary": "Correct retry primitive, unwired call sites — retryAfterMs supported but never passed by callers, causing Retry-After headers to be silently ignored under concurrency",
+    "signals": [
+      "src/agents/venice-models.ts:24 — 429 handled without Retry-After",
+      "src/agents/venice-models.ts:24 — All 429s treated as retryable — CAP vs WAIT not distinguished",
+      "Retry-After: 600 returned by Venice API — client retries immediately on own schedule",
+      "10-minute timeout block reported in issue #49811",
+      "pitstop-check flagged 22 issues across src/agents directory"
+    ]
+  },
+  "constraints": [
+    "retryAfterMs must be passed at every call site that handles 429 responses",
+    "Retry-After header value must be used as the floor for retry delay",
+    "CAP (concurrency/quota limit) and WAIT (transient burst) must be distinguished at call site level"
+  ],
+  "knobs": [
+    "retryAfterMs — callback that reads Retry-After header from error response",
+    "maxElapsedMs — hard cap on total retry window",
+    "shouldRetry — per-call-site classification of retryable vs terminal errors"
+  ],
+  "verification": [
+    "Run pitstop-check against src/agents — should return zero warnings after wiring retryAfterMs at all call sites",
+    "Trigger Venice API rate limit — verify client waits exactly Retry-After duration before retrying",
+    "Confirm issue #49811 timeout block does not recur after fix"
+  ],
+  "tags": ["rate_limit", "429", "retry", "openclaw", "ai-agent", "venice", "unwired-call-site"],
+  "mitigation_signature": {
+    "hazards": ["rate_limit_429"],
+    "constraints": ["retry_after_ms_wired_at_call_sites", "cap_vs_wait_distinction"],
+    "knobs": ["retryAfterMs", "maxElapsedMs", "shouldRetry"],
+    "anti_patterns": ["correct_primitive_unwired_callers", "retry_after_ignored_under_concurrency"]
+  }
+}
