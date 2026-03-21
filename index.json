@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-03-21T16:20:29Z",
+  "updated_at": "2026-03-21T17:09:51Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -287,6 +287,26 @@
         "concurrencyCap"
       ],
       "path": "receipts/2026/03/PT-2026-03-21-github-continue-dev-429-cap-wait-missing/receipt.json"
+    },
+    {
+      "id": "PT-2026-03-21-github-vercel-ai-sdk-429-retry-after-gap",
+      "date": "2026-03-21",
+      "hazard_class": [
+        "rate_limit_429"
+      ],
+      "source_url": "https://github.com/vercel/ai/issues/5018",
+      "repo": "vercel/ai",
+      "signals": [
+        "429 handled without Retry-After in gateway error type",
+        "Retry-After >60s falls back to exponential backoff \u2014 quota exhaustion misclassified as transient",
+        "CAP vs WAIT not distinguished at error classification layer"
+      ],
+      "knobs": [
+        "retryAfterCap",
+        "retryAfterMs",
+        "maxElapsedMs"
+      ],
+      "path": "receipts/2026/03/PT-2026-03-21-github-vercel-ai-sdk-429-retry-after-gap/receipt.json"
     }
   ]
 }

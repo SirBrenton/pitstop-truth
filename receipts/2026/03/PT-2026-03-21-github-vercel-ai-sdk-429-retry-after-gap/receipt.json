@@ -1,0 +1,44 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-03-21-github-vercel-ai-sdk-429-retry-after-gap",
+  "created_at": "2026-03-21T18:00:00Z",
+  "source": {
+    "url": "https://github.com/vercel/ai/issues/5018",
+    "kind": "github_issue",
+    "repo": "vercel/ai",
+    "issue_or_pr": 5018,
+    "notes": "Discovered via pitstop-check@0.1.1. PR #7246 (Jul 2025) added Retry-After support capped at 60s. Gap remains: error types don't expose header to callers, and >60s Retry-After (quota exhaustion / STOP signal) falls back to exponential backoff instead of being classified correctly."
+  },
+  "hazard": {
+    "class": ["rate_limit_429"],
+    "summary": "Vercel AI SDK respects Retry-After only up to 60s — values above 60s fall back to exponential backoff, misclassifying quota exhaustion (STOP) as transient rate limit (WAIT)",
+    "signals": [
+      "packages/gateway/src/errors/gateway-rate-limit-error.ts:18 — 429 handled without Retry-After",
+      "packages/provider/src/errors/api-call-error.ts:31 — CAP vs WAIT not distinguished",
+      "PR #7246 capped Retry-After respect at 60s — Anthropic returns Retry-After: 600 for quota exhaustion",
+      "Issue #5018 open since Feb 2025 — partial fix merged Jul 2025, gap remains"
+    ]
+  },
+  "constraints": [
+    "Retry-After values above 60s must be classified as STOP or quota exhaustion, not retried with exponential backoff",
+    "Error types must expose Retry-After header value to callers implementing custom retry logic",
+    "CAP (concurrency/quota limit) and WAIT (transient burst) must be distinguished at the error classification layer"
+  ],
+  "knobs": [
+    "retryAfterCap — configurable ceiling before escalating to STOP classification",
+    "retryAfterMs — exposed on error type for caller consumption",
+    "maxElapsedMs — hard cap on total retry window regardless of header value"
+  ],
+  "verification": [
+    "Run pitstop-check against packages/gateway/src and packages/provider/src/errors — should return zero warnings after fix",
+    "Send request that returns Retry-After: 600 — verify SDK classifies as STOP not WAIT",
+    "Verify error type exposes retry_after_ms field to callers"
+  ],
+  "tags": ["rate_limit", "429", "retry", "vercel", "ai-sdk", "llm-provider", "quota-exhaustion"],
+  "mitigation_signature": {
+    "hazards": ["rate_limit_429"],
+    "constraints": ["retry_after_cap_configurable", "stop_vs_wait_distinction", "error_type_exposes_header"],
+    "knobs": ["retryAfterCap", "retryAfterMs", "maxElapsedMs"],
+    "anti_patterns": ["blanket_retry_after_cap", "quota_exhaustion_treated_as_transient"]
+  }
+}
