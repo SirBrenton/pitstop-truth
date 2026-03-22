@@ -1,12 +1,12 @@
 {
   "schema": "pitstop-capability.v0",
   "name": "pitstop-truth",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Machine-readable corpus of AI/API execution failure patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, and concurrency amplification — classified, verified, and cross-referenced across production systems.",
   "capability": "execution_failure_classification",
   "thesis": "When AI pipelines hit rate limits and timeouts, they often respond incorrectly — amplifying pressure instead of absorbing it. This corpus documents how, where, and why.",
   "corpus": {
-    "receipts": 16,
+    "receipts": 17,
     "hazard_classes": [
       "rate_limit_429",
       "timeout_deadline",
@@ -19,11 +19,12 @@
       "zulip/zulip",
       "vercel/ai",
       "anthropics/claude-code",
-      "svix/svix-webhooks"
+      "svix/svix-webhooks",
+      "hivemoot/hivemoot-agent"
     ],
     "date_range": {
       "earliest": "2025-07-15",
-      "latest": "2026-03-21"
+      "latest": "2026-03-22"
     }
   },
   "query": {
@@ -80,6 +81,18 @@
       ],
       "canonical_receipt": "PT-2026-02-26-github-issue-claude-code-25805-429-throughput-vs-quota",
       "fix": "Distinguish throughput (WAIT: retry in Xs) from quota (STOP: resets at T). Surface correct signal to caller."
+    },
+    {
+      "id": "autonomous-agent-taxonomy-convergence",
+      "hazard": "rate_limit_429",
+      "summary": "Autonomous multi-agent system conflates quota exhaustion and transient rate limiting into a single backoff tier. Agents independently derive the WAIT/STOP distinction from first principles — confirming the taxonomy is discoverable without human guidance.",
+      "classification": "STOP vs WAIT collapsed — autonomous derivation",
+      "confirmed_in": [
+        "hivemoot/hivemoot-agent"
+      ],
+      "canonical_receipt": "PT-2026-03-22-github-hivemoot-agent-421-autonomous-taxonomy-convergence",
+      "fix": "Separate backoff tiers: RATE_LIMIT_BACKOFF_FLOOR_SECS=300 for transient 429, QUOTA_BACKOFF_FLOOR_SECS=7200 for quota exhaustion. Map provider-specific error strings explicitly to hazard class before applying backoff.",
+      "note": "This pattern was independently derived by autonomous agents — not reported by a human engineer. Confirms the classification problem is real enough that agents solving it themselves arrive at the same taxonomy."
     }
   ],
   "detection": {
@@ -102,5 +115,5 @@
   },
   "contact": "brentondwilliams@gmail.com",
   "license": "Apache-2.0",
-  "last_updated": "2026-03-21"
+  "last_updated": "2026-03-22"
 }
