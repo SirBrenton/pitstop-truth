@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-03-21T17:09:51Z",
+  "updated_at": "2026-03-22T19:35:02Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -307,6 +307,26 @@
         "maxElapsedMs"
       ],
       "path": "receipts/2026/03/PT-2026-03-21-github-vercel-ai-sdk-429-retry-after-gap/receipt.json"
+    },
+    {
+      "id": "PT-2026-03-22-github-hivemoot-agent-421-autonomous-taxonomy-convergence",
+      "date": "2026-03-22",
+      "hazard_class": [
+        "rate_limit_429"
+      ],
+      "source_url": "https://github.com/hivemoot/hivemoot-agent/issues/421",
+      "repo": "hivemoot/hivemoot-agent",
+      "signals": [
+        "429 treated identically to TerminalQuotaError \u2014 both receive 2h+ backoff floor",
+        "rate_limit_error Anthropic stream-json falls through to immediate retry unclassified",
+        "multi-agent setup locks out all agents for hours on recoverable rate limit"
+      ],
+      "knobs": [
+        "RATE_LIMIT_BACKOFF_FLOOR_SECS",
+        "RATE_LIMIT_BACKOFF_MAX_SECS",
+        "RATE_LIMIT_BACKOFF_JITTER_PCT"
+      ],
+      "path": "receipts/2026/03/PT-2026-03-22-github-hivemoot-agent-421-autonomous-taxonomy-convergence/receipt.json"
     }
   ]
 }

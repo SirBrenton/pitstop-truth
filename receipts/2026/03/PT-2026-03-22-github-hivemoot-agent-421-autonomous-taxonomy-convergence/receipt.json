@@ -1,0 +1,52 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-03-22-github-hivemoot-agent-421-autonomous-taxonomy-convergence",
+  "created_at": "2026-03-22T20:00:00Z",
+  "source": {
+    "url": "https://github.com/hivemoot/hivemoot-agent/issues/421",
+    "kind": "github_issue",
+    "repo": "hivemoot/hivemoot-agent",
+    "issue_or_pr": 421,
+    "notes": "Autonomous multi-agent system (drone, builder, heater, forager) independently converging on the quota vs rate_limited taxonomy through agent deliberation over 5 days. No human authored the classification — agents derived it from first principles by analyzing provider error patterns across Claude, OpenAI/Codex, and Gemini."
+  },
+  "hazard": {
+    "class": ["rate_limit_429"],
+    "summary": "Autonomous agent system conflates quota exhaustion (STOP) and transient rate limiting (WAIT) into a single backoff tier, causing agents to sit out for hours on recoverable rate limits",
+    "signals": [
+      "429 Too Many Requests treated identically to TerminalQuotaError — both receive 2h+ backoff floor",
+      "In multi-agent setup with shared provider endpoint, a transient 429 locks out all agents for hours",
+      "rate_limit_error (Anthropic stream-json format) falls through to immediate retry — unclassified",
+      "RESOURCE_EXHAUSTED (Gemini gRPC quota exhaustion) requires different recovery than 429 burst",
+      "overloaded_error (HTTP 529) treated as quota but recovers in minutes like rate limit"
+    ]
+  },
+  "constraints": [
+    "quota exhaustion (TerminalQuotaError, billing_hard_limit_reached) must use long backoff floor — 2h+",
+    "transient rate limiting (429, rate_limit_exceeded, rate_limit_error) must use short backoff floor — 300s",
+    "provider-specific error strings must be explicitly mapped to hazard class before backoff is applied",
+    "Anthropic stream-json rate_limit_error must be in rate_limited bucket — not quota, not unclassified",
+    "Multi-agent systems sharing a provider endpoint must apply jitter to prevent re-collision after backoff"
+  ],
+  "knobs": [
+    "RATE_LIMIT_BACKOFF_FLOOR_SECS — default 300 (not 7200 — CLI retries already exhausted short window)",
+    "RATE_LIMIT_BACKOFF_MAX_SECS — default 1800 (repeated hits signal systemic concurrency pressure)",
+    "RATE_LIMIT_BACKOFF_JITTER_PCT — default 20 (higher jitter prevents agent re-collision at shared endpoint)",
+    "QUOTA_BACKOFF_FLOOR_SECS — default 7200 (quota exhaustion requires human action or daily reset)",
+    "QUOTA_BACKOFF_MAX_SECS — default 86400"
+  ],
+  "verification": [
+    "Periodic run emitting 429 Too Many Requests applies ~300s backoff, not 7200s",
+    "Periodic run emitting TerminalQuotaError applies 7200s+ backoff",
+    "Anthropic stream-json rate_limit_error classified as rate_limited, not falling through to immediate retry",
+    "Multiple agents hitting same provider endpoint do not re-collide after backoff expires — jitter distributes re-entry",
+    "Run pitstop-check against controller.sh after Python support added — should flag classify_periodic_failure conflation"
+  ],
+  "notes": "This receipt documents an autonomous multi-agent system independently deriving the WAIT/CAP/STOP taxonomy through agent deliberation — no human authored the classification. The convergence validates that the taxonomy is discoverable from first principles given sufficient evidence from provider error patterns. The issue also surfaces the provider-specific string mapping problem: each provider (Anthropic, OpenAI/Codex, Gemini) uses different error identifiers for the same underlying failure class.",
+  "tags": ["rate_limit", "429", "autonomous-agents", "multi-agent", "taxonomy-convergence", "anthropic", "gemini", "openai", "quota-exhaustion"],
+  "mitigation_signature": {
+    "hazards": ["rate_limit_429"],
+    "constraints": ["quota_vs_rate_limit_distinct_backoff_tiers", "provider_string_mapping_explicit", "jitter_prevents_agent_recollision"],
+    "knobs": ["RATE_LIMIT_BACKOFF_FLOOR_SECS", "RATE_LIMIT_BACKOFF_MAX_SECS", "RATE_LIMIT_BACKOFF_JITTER_PCT"],
+    "anti_patterns": ["quota_and_rate_limit_same_backoff", "provider_error_strings_unclassified", "multi_agent_synchronized_retry"]
+  }
+}
