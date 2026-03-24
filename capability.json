@@ -1,12 +1,12 @@
 {
   "schema": "pitstop-capability.v0",
   "name": "pitstop-truth",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Machine-readable corpus of AI/API execution failure patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, and concurrency amplification — classified, verified, and cross-referenced across production systems.",
   "capability": "execution_failure_classification",
   "thesis": "When AI pipelines hit rate limits and timeouts, they often respond incorrectly — amplifying pressure instead of absorbing it. This corpus documents how, where, and why.",
   "corpus": {
-    "receipts": 17,
+    "receipts": 18,
     "hazard_classes": [
       "rate_limit_429",
       "timeout_deadline",
@@ -20,11 +20,12 @@
       "vercel/ai",
       "anthropics/claude-code",
       "svix/svix-webhooks",
-      "hivemoot/hivemoot-agent"
+      "hivemoot/hivemoot-agent",
+      "massgen/MassGen"
     ],
     "date_range": {
       "earliest": "2025-07-15",
-      "latest": "2026-03-22"
+      "latest": "2026-03-23"
     }
   },
   "query": {
@@ -93,6 +94,18 @@
       "canonical_receipt": "PT-2026-03-22-github-hivemoot-agent-421-autonomous-taxonomy-convergence",
       "fix": "Separate backoff tiers: RATE_LIMIT_BACKOFF_FLOOR_SECS=300 for transient 429, QUOTA_BACKOFF_FLOOR_SECS=7200 for quota exhaustion. Map provider-specific error strings explicitly to hazard class before applying backoff.",
       "note": "This pattern was independently derived by autonomous agents — not reported by a human engineer. Confirms the classification problem is real enough that agents solving it themselves arrive at the same taxonomy."
+    },
+    {
+      "id": "taxonomy-adoption-in-production",
+      "hazard": "rate_limit_429",
+      "summary": "WAIT/CAP/STOP classification adopted as production implementation in LLM API circuit breaker within 4 hours of first contact. First external validation that the taxonomy is immediately actionable by engineers solving real agent reliability problems.",
+      "classification": "External adoption — taxonomy → production code",
+      "confirmed_in": [
+        "massgen/MassGen"
+      ],
+      "canonical_receipt": "PT-2026-03-23-github-massgen-1024-wait-cap-stop-circuit-breaker-adoption",
+      "fix": "429 responses must be classified before any circuit breaker or enforcement decision runs. STOP forces CB open immediately. WAIT does not increment failure counter. CAP reduces concurrency before retry.",
+      "note": "PR #1024 credits @SirBrenton explicitly. 1,631 lines of new code, 62 tests. Phase 1 covers Claude backend. Phases 2/3 extend to ChatCompletions, Response API, and Gemini. This is the first confirmed external adoption of the taxonomy as a production primitive."
     }
   ],
   "detection": {
@@ -115,5 +128,5 @@
   },
   "contact": "brentondwilliams@gmail.com",
   "license": "Apache-2.0",
-  "last_updated": "2026-03-22"
+  "last_updated": "2026-03-23"
 }
