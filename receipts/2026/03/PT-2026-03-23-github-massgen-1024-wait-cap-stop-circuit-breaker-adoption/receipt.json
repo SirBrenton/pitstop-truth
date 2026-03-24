@@ -1,0 +1,94 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-03-23-github-massgen-1024-wait-cap-stop-circuit-breaker-adoption",
+  "created_at": "2026-03-23T21:00:00Z",
+  "source": {
+    "url": "https://github.com/massgen/MassGen/pull/1024",
+    "kind": "github_pr",
+    "repo": "massgen/MassGen",
+    "issue_or_pr": 1024,
+    "notes": "Production PR implementing LLM API circuit breaker with WAIT/CAP/STOP 429 classification for Claude backend. 1,631 lines of new code, 62 tests. PR description explicitly credits @SirBrenton for the classification taxonomy. Implemented within 4 hours of comment on issue #1014."
+  },
+  "hazard": {
+    "class": [
+      "rate_limit_429"
+    ],
+    "summary": "LLM API circuit breaker conflates WAIT, CAP, and STOP 429 cases \u2014 quota exhaustion treated as retryable, burning budget and triggering retry storms in multi-agent orchestration",
+    "signals": [
+      "429 with short Retry-After (<= 60s) \u2192 WAIT: sleep and retry, no CB failure counted",
+      "429 with long Retry-After (> 60s) \u2192 STOP: force-open circuit breaker, no retry",
+      "429 with no Retry-After \u2192 CAP: backoff and retry with reduced concurrency, CB failure counted",
+      "Claude, ChatCompletions, Response API had zero 429 detection or classification before this PR",
+      "Gemini had retry logic but no WAIT/CAP/STOP distinction"
+    ]
+  },
+  "constraints": [
+    "STOP cases must force-open the circuit breaker immediately \u2014 not retry",
+    "WAIT cases must not increment the CB failure counter \u2014 they are recoverable",
+    "CAP cases must reduce concurrency before retry \u2014 not just delay",
+    "Classification must run before any enforcement decision",
+    "retry_after_threshold_seconds must be configurable \u2014 default 60s separates WAIT from STOP"
+  ],
+  "knobs": [
+    "retry_after_threshold_seconds \u2014 default 60 (429 with Retry-After above this \u2192 STOP)",
+    "max_failures \u2014 default 5 (CB opens after N consecutive failures)",
+    "reset_time_seconds \u2014 default 60 (HALF_OPEN probe window)",
+    "backoff_multiplier \u2014 default 2.0",
+    "max_backoff_seconds \u2014 default 300",
+    "enabled \u2014 default false (opt-in, no behavior change until explicitly enabled)"
+  ],
+  "verification": [
+    "pytest massgen/tests/test_llm_circuit_breaker.py -v \u2014 62 tests pass",
+    "429 with Retry-After: 30 \u2192 WAIT classification, CB stays CLOSED",
+    "429 with Retry-After: 120 \u2192 STOP classification, CB transitions to OPEN immediately",
+    "429 with no Retry-After \u2192 CAP classification, CB failure counter increments",
+    "Concurrent access: exactly-one probe in HALF_OPEN state"
+  ],
+  "notes": "This receipt documents the first external adoption of the WAIT/CAP/STOP taxonomy as a production implementation. The PR credits @SirBrenton explicitly and was implemented within 4 hours of a comment on issue #1014. This is not a bug report \u2014 it is a production feature built around the taxonomy. Phase 1 covers Claude backend only. Phases 2 and 3 will extend to ChatCompletions, Response API, and Gemini.",
+  "tags": [
+    "rate_limit",
+    "429",
+    "circuit-breaker",
+    "taxonomy-adoption",
+    "multi-agent",
+    "anthropic",
+    "production-implementation",
+    "attribution"
+  ],
+  "mitigation_signature": {
+    "hazards": [
+      "rate_limit_429"
+    ],
+    "constraints": [
+      "wait_cap_stop_distinct_handling",
+      "stop_forces_circuit_open",
+      "wait_does_not_increment_failure_counter",
+      "cap_reduces_concurrency"
+    ],
+    "knobs": [
+      "retry_after_threshold_seconds",
+      "max_failures",
+      "reset_time_seconds",
+      "enabled"
+    ],
+    "anti_patterns": [
+      "all_429s_retryable",
+      "quota_exhaustion_treated_as_transient",
+      "no_concurrency_reduction_on_cap"
+    ]
+  },
+  "routing_impact": {
+    "default_action": "cooldown_and_route_away",
+    "cooldown_source": "retry_after_header",
+    "cooldown_scope_key": "provider:claude",
+    "during_cooldown": {
+      "make_http_call": false,
+      "eligible_for_routing": false,
+      "emit_decision_event": true
+    },
+    "after_cooldown": {
+      "probe_strategy": "single_flight",
+      "max_probe_qps": 1
+    }
+  }
+}
