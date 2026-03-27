@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-03-24T05:52:32Z",
+  "updated_at": "2026-03-27T18:51:47Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -347,6 +347,25 @@
         "enabled"
       ],
       "path": "receipts/2026/03/PT-2026-03-23-github-massgen-1024-wait-cap-stop-circuit-breaker-adoption/receipt.json"
+    },
+    {
+      "id": "PT-2026-03-25-github-openclaw-55919-structural-rate-limit-misclassified",
+      "date": "2026-03-25",
+      "hazard_class": [
+        "rate_limit_429"
+      ],
+      "source_url": "https://github.com/openclaw/openclaw/issues/55919",
+      "repo": "openclaw/openclaw",
+      "signals": [
+        "Extra usage is required for long context requests classified as transient rate limit",
+        "RATE_LIMIT_SPECIFIC_HINT_RE only matches time patterns not billing signals",
+        "User sees try again later instead of reduce context or enable billing"
+      ],
+      "knobs": [
+        "RATE_LIMIT_SPECIFIC_HINT_RE",
+        "structural_rate_limit_patterns"
+      ],
+      "path": "receipts/2026/03/PT-2026-03-25-github-openclaw-55919-structural-rate-limit-misclassified/receipt.json"
     }
   ]
 }

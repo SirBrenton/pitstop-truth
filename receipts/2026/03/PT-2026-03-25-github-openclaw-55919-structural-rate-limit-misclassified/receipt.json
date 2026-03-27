@@ -1,0 +1,64 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-03-25-github-openclaw-55919-structural-rate-limit-misclassified",
+  "created_at": "2026-03-25T20:00:00Z",
+  "source": {
+    "url": "https://github.com/openclaw/openclaw/issues/55919",
+    "kind": "github_issue",
+    "repo": "openclaw/openclaw",
+    "issue_or_pr": 55919,
+    "notes": "Production incident with gateway error logs showing 429 with 'Extra usage is required for long context requests' being surfaced to users as 'API rate limit reached. Please try again later.' — wrong advice that cannot be resolved by waiting or retrying."
+  },
+  "hazard": {
+    "class": ["rate_limit_429"],
+    "summary": "Structural rate limit (billing/context tier) misclassified as transient rate limit by message-pattern matching, causing wrong user guidance — 'try again later' instead of 'reduce context or enable billing'",
+    "signals": [
+      "rawError=429 {\"type\":\"error\",\"error\":{\"type\":\"rate_limit_error\",\"message\":\"Extra usage is required for long context requests.\"}}",
+      "User sees: API rate limit reached. Please try again later.",
+      "RATE_LIMIT_SPECIFIC_HINT_RE only matches time-based patterns (minutes, seconds, try again in, plan, quota)",
+      "Structural rate limit message contains no time signals — falls through to generic copy",
+      "Retrying will never help — context length does not change between retries"
+    ]
+  },
+  "constraints": [
+    "Structural rate limits (billing/tier/context) must be classified as STOP — not WAIT",
+    "Message-pattern classifiers must distinguish time-based signals from billing/tier signals before applying copy",
+    "User-facing guidance for structural limits must surface the correct action: reduce context or enable billing",
+    "Raw provider error messages must not be collapsed into generic 'try again later' when the error is non-retryable",
+    "Classification must run before copy generation — not after"
+  ],
+  "knobs": [
+    "RATE_LIMIT_SPECIFIC_HINT_RE — extend to include billing/tier signal patterns alongside time patterns",
+    "formatRateLimitOrOverloadedErrorCopy — add dedicated branch for structural limits before time-pattern gate",
+    "structural_rate_limit_patterns — configurable list of message substrings that indicate non-retryable billing/tier limits"
+  ],
+  "verification": [
+    "429 with 'Extra usage is required for long context requests' → classified as STOP, not WAIT",
+    "User-facing copy surfaces 'reduce context or enable Extra Usage billing' — not 'try again later'",
+    "429 with 'Rate limit reached... try again in 5.5s' → still classified as WAIT (regression check)",
+    "Raw provider error message preserved and surfaced when structural limit detected",
+    "No retry attempted after structural limit classification"
+  ],
+  "notes": "This receipt documents a new sub-class of 429 misclassification: message-content classification failure. Previous receipts document WAIT/STOP confusion based on Retry-After header presence and value. This case has no Retry-After header — the structural vs transient distinction must be made from the error message content itself. The 'Extra usage required' message is Anthropic-specific but the pattern generalizes: any provider that returns billing/tier errors as 429 without a short Retry-After is vulnerable to the same misclassification. Related active PR: openclaw/openclaw#54594.",
+  "tags": ["rate_limit", "429", "anthropic", "openclaw", "message-classification", "structural-limit", "context-window", "billing-tier", "stop-misclassified-as-wait"],
+  "mitigation_signature": {
+    "hazards": ["rate_limit_429"],
+    "constraints": ["structural_limit_classified_as_stop", "message_content_checked_before_time_patterns", "correct_user_guidance_surfaced"],
+    "knobs": ["RATE_LIMIT_SPECIFIC_HINT_RE", "structural_rate_limit_patterns"],
+    "anti_patterns": ["all_429s_treated_as_transient", "time_pattern_only_classification", "generic_retry_guidance_for_structural_limits"]
+  },
+  "routing_impact": {
+    "default_action": "fail_fast",
+    "cooldown_source": "server_hint",
+    "cooldown_scope_key": "provider:anthropic:context_tier",
+    "during_cooldown": {
+      "make_http_call": false,
+      "eligible_for_routing": false,
+      "emit_decision_event": true
+    },
+    "after_cooldown": {
+      "probe_strategy": "none",
+      "max_probe_qps": 0
+    }
+  }
+}
