@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-03-27T18:51:47Z",
+  "updated_at": "2026-03-28T15:46:20Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -366,6 +366,26 @@
         "structural_rate_limit_patterns"
       ],
       "path": "receipts/2026/03/PT-2026-03-25-github-openclaw-55919-structural-rate-limit-misclassified/receipt.json"
+    },
+    {
+      "id": "PT-2026-03-25-github-claude-hud-333-polling-amplification-cap",
+      "date": "2026-03-25",
+      "hazard_class": [
+        "rate_limit_429"
+      ],
+      "source_url": "https://github.com/nicklvsa/claude-hud/issues/333",
+      "repo": "nicklvsa/claude-hud",
+      "signals": [
+        "5+ concurrent windows each polling usage API independently",
+        "per-instance backoff does not help \u2014 burst is additive across all instances",
+        "429 on usage display with no Retry-After header"
+      ],
+      "knobs": [
+        "poll_frequency_ms",
+        "primary_poller_lock",
+        "cache_ttl_ms"
+      ],
+      "path": "receipts/2026/03/PT-2026-03-25-github-claude-hud-333-polling-amplification-cap/receipt.json"
     }
   ]
 }

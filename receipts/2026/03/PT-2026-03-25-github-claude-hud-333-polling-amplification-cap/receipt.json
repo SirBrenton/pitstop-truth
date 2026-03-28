@@ -1,0 +1,66 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-03-25-github-claude-hud-333-polling-amplification-cap",
+  "created_at": "2026-03-25T22:00:00Z",
+  "source": {
+    "url": "https://github.com/nicklvsa/claude-hud/issues/333",
+    "kind": "github_issue",
+    "repo": "nicklvsa/claude-hud",
+    "issue_or_pr": 333,
+    "notes": "Multiple Claude Code HUD instances each independently polling the usage API, creating additive concurrency burst that exceeds rate limits even when individual usage is low. 5-10+ concurrent windows typical in multi-agent workflows."
+  },
+  "hazard": {
+    "class": ["rate_limit_429"],
+    "summary": "Multiple client instances independently polling the same rate-limited endpoint create additive concurrency burst that exceeds limits — even when individual instance usage is well within limits. Per-instance backoff makes it worse, not better.",
+    "signals": [
+      "5+ concurrent Claude Code windows each polling usage API independently",
+      "429 Too Many Requests on usage/token display endpoint",
+      "Per-instance exponential backoff does not help — burst is additive across all instances simultaneously",
+      "Plugin version 0.0.10, Bun runtime, macOS",
+      "HUD polls periodically — frequency multiplied by instance count"
+    ]
+  },
+  "constraints": [
+    "Multi-instance polling systems must designate a single poller — not allow each instance to poll independently",
+    "CAP classification applies: reduce concurrency (instance count hitting API) before retrying",
+    "Per-instance backoff must not be the primary mitigation — it does not reduce total request rate",
+    "Shared cache with single designated primary poller must be the default architecture for multi-instance tools",
+    "On 429 with no Retry-After, show last known value and reduce poll frequency — do not retry immediately"
+  ],
+  "knobs": [
+    "poll_frequency_ms — reduce when multiple instances detected",
+    "cache_ttl_ms — shared file-based cache TTL for usage data",
+    "primary_poller_lock — file lock mechanism to elect single polling instance",
+    "jitter_ms — randomize poll offset across instances to prevent synchronized bursts",
+    "429_fallback_display — show last known value instead of error on rate limit"
+  ],
+  "verification": [
+    "5+ concurrent windows show no 429 errors on usage display",
+    "Total API calls per minute does not scale linearly with instance count",
+    "Single designated poller confirmed via file lock — others read from cache",
+    "On 429, last known value displayed — no error shown to user",
+    "Poll frequency reduced automatically when multiple instances detected"
+  ],
+  "notes": "This receipt documents a new failure shape: client-side polling amplification. Previous receipts document single-caller 429 misclassification. This case involves correct per-instance behavior that fails predictably at N instances because the burst is additive. The correct classification is CAP — the fix is reducing the number of callers (concurrency), not adding per-caller backoff. Note: CC 2.1.80+ pipes rate_limits via stdin on every render, eliminating the API polling problem entirely for high-frequency data. The receipt generalizes to any multi-instance tool sharing a rate-limited API: monitoring agents, status bars, health checkers, HUD plugins.",
+  "tags": ["rate_limit", "429", "cap", "polling-amplification", "multi-instance", "concurrency", "claude-code", "hud", "shared-cache", "client-side"],
+  "mitigation_signature": {
+    "hazards": ["rate_limit_429"],
+    "constraints": ["single_poller_designated", "shared_cache_required", "per_instance_backoff_insufficient"],
+    "knobs": ["poll_frequency_ms", "cache_ttl_ms", "primary_poller_lock", "jitter_ms"],
+    "anti_patterns": ["independent_polling_per_instance", "per_instance_backoff_only", "linear_scaling_of_api_calls_with_instance_count"]
+  },
+  "routing_impact": {
+    "default_action": "cooldown_and_route_away",
+    "cooldown_source": "none",
+    "cooldown_scope_key": "tool:claude-hud:usage-poll",
+    "during_cooldown": {
+      "make_http_call": false,
+      "eligible_for_routing": false,
+      "emit_decision_event": true
+    },
+    "after_cooldown": {
+      "probe_strategy": "single_flight",
+      "max_probe_qps": 1
+    }
+  }
+}
