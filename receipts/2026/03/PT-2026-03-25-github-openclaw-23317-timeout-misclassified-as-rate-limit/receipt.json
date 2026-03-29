@@ -1,0 +1,65 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-03-25-github-openclaw-23317-timeout-misclassified-as-rate-limit",
+  "created_at": "2026-03-25T23:00:00Z",
+  "source": {
+    "url": "https://github.com/openclaw/openclaw/issues/23317",
+    "kind": "github_issue",
+    "repo": "openclaw/openclaw",
+    "issue_or_pr": 23317,
+    "notes": "Production log sequence documented with code pointers. Timeout treated as strong rotation signal equivalent to 429, causing premature profile cooldown and provider fallback cascade on transient network issues."
+  },
+  "hazard": {
+    "class": ["rate_limit_429", "timeout_deadline"],
+    "summary": "Request timeout misclassified as rate-limit signal, triggering same exponential cooldown and auth profile rotation as an explicit 429. A single transient timeout cascades through all profiles and falls back to a different provider entirely.",
+    "signals": [
+      "Profile openai-codex:default timed out (possible rate limit). Trying next account...",
+      "No available auth profile for openai-codex (all in cooldown or unavailable).",
+      "calculateAuthProfileCooldownMs applies same exponential schedule for timeout and 429",
+      "Timeout triggers markAuthProfileFailure(reason: timeout) then advanceAuthProfile() with no retry gate",
+      "Single network blip exhausts all profiles and triggers model/provider fallback"
+    ]
+  },
+  "constraints": [
+    "Timeout must not trigger profile cooldown until retries on same profile are exhausted",
+    "Explicit 429 and provider rate-limit codes must still trigger immediate cooldown and rotation",
+    "Timeout and rate-limit failures must use separate cooldown schedules — not unified exponential backoff",
+    "At least one jittered retry on same profile must precede any cooldown state write on timeout",
+    "Logs must distinguish: retry attempt, delay applied, and whether cooldown was written"
+  ],
+  "knobs": [
+    "retrySameProfileOnTimeout — number of retries on same profile before cooldown (default: 1)",
+    "retryBackoffMs — jitter range for timeout retries (default: [300, 1200])",
+    "per-reason cooldown schedules — lighter backoff for timeouts vs 429s",
+    "minimumConsecutiveFailuresBeforeCooldown — don't cooldown on first timeout"
+  ],
+  "verification": [
+    "Single timeout retries same auth profile with jitter — no cooldown entry written",
+    "Cooldown for timeout only applied after retrySameProfileOnTimeout retries exhausted",
+    "Explicit 429 still triggers immediate cooldown and rotation",
+    "Multiple profiles + intermittent timeouts do not immediately exhaust all profiles",
+    "Logs show: retry attempt number, delay, and whether cooldown was applied"
+  ],
+  "notes": "This receipt documents the inverse of the standard 429 misclassification pattern. Previous receipts document 429 being treated as WAIT when it is STOP, or STOP when it is WAIT. This case documents a non-429 failure (timeout) being treated as a 429-equivalent signal — triggering the same aggressive cooldown and rotation that should be reserved for confirmed rate limits. The correct classification: timeout is WAIT (retry same profile with jitter) until retries exhausted, then STOP (cooldown + rotate). Explicit 429 remains immediate STOP. The unified failure handler in calculateAuthProfileCooldownMs is the root cause — it cannot distinguish failure classes.",
+  "tags": ["timeout", "rate_limit", "429", "openclaw", "auth-profile", "fallback-cascade", "timeout-misclassified", "unified-failure-handler", "premature-rotation"],
+  "mitigation_signature": {
+    "hazards": ["rate_limit_429", "timeout_deadline"],
+    "constraints": ["timeout_retry_before_cooldown", "separate_cooldown_schedules_per_failure_class", "429_still_immediate_cooldown"],
+    "knobs": ["retrySameProfileOnTimeout", "retryBackoffMs", "per_reason_cooldown_schedule"],
+    "anti_patterns": ["unified_cooldown_for_all_failure_classes", "immediate_rotation_on_timeout", "no_retry_gate_before_cooldown"]
+  },
+  "routing_impact": {
+    "default_action": "retry_with_budget",
+    "cooldown_source": "fixed_seconds",
+    "cooldown_scope_key": "provider:openai-codex:auth-profile",
+    "during_cooldown": {
+      "make_http_call": false,
+      "eligible_for_routing": false,
+      "emit_decision_event": true
+    },
+    "after_cooldown": {
+      "probe_strategy": "single_flight",
+      "max_probe_qps": 1
+    }
+  }
+}

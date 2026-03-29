@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-03-28T15:46:20Z",
+  "updated_at": "2026-03-29T05:41:06Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -386,6 +386,27 @@
         "cache_ttl_ms"
       ],
       "path": "receipts/2026/03/PT-2026-03-25-github-claude-hud-333-polling-amplification-cap/receipt.json"
+    },
+    {
+      "id": "PT-2026-03-25-github-openclaw-23317-timeout-misclassified-as-rate-limit",
+      "date": "2026-03-25",
+      "hazard_class": [
+        "rate_limit_429",
+        "timeout_deadline"
+      ],
+      "source_url": "https://github.com/openclaw/openclaw/issues/23317",
+      "repo": "openclaw/openclaw",
+      "signals": [
+        "timeout triggers same cooldown and rotation as explicit 429",
+        "single network blip exhausts all profiles and triggers provider fallback",
+        "calculateAuthProfileCooldownMs applies unified exponential schedule for timeout and 429"
+      ],
+      "knobs": [
+        "retrySameProfileOnTimeout",
+        "retryBackoffMs",
+        "per_reason_cooldown_schedule"
+      ],
+      "path": "receipts/2026/03/PT-2026-03-25-github-openclaw-23317-timeout-misclassified-as-rate-limit/receipt.json"
     }
   ]
 }
