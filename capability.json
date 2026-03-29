@@ -1,12 +1,12 @@
 {
   "schema": "pitstop-capability.v0",
   "name": "pitstop-truth",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Machine-readable corpus of AI/API execution failure patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, and concurrency amplification \u2014 classified, verified, and cross-referenced across production systems.",
   "capability": "execution_failure_classification",
   "thesis": "When AI pipelines hit rate limits and timeouts, they often respond incorrectly \u2014 amplifying pressure instead of absorbing it. This corpus documents how, where, and why.",
   "corpus": {
-    "receipts": 20,
+    "receipts": 21,
     "hazard_classes": [
       "rate_limit_429",
       "timeout_deadline",
@@ -131,6 +131,18 @@
       "canonical_receipt": "PT-2026-03-25-github-claude-hud-333-polling-amplification-cap",
       "fix": "Designate single primary poller via file lock. Other instances read from shared cache. On 429 with no Retry-After: show last known value, reduce poll frequency. Per-instance backoff does not reduce total burst.",
       "note": "New failure shape: client-side polling amplification. Correct single-instance behavior fails predictably at N instances because burst is additive. Generalizes to any multi-instance tool sharing a rate-limited API: monitoring agents, status bars, health checkers, agent orchestrators."
+    },
+    {
+      "id": "timeout-misclassified-as-rate-limit",
+      "hazard": "timeout_deadline",
+      "summary": "Request timeout triggers same exponential cooldown and auth profile rotation as explicit 429. A single transient network blip exhausts all profiles and cascades to provider fallback. Unified failure handler cannot distinguish timeout from rate limit.",
+      "classification": "Timeout treated as STOP \u2014 should be WAIT with retry gate",
+      "confirmed_in": [
+        "openclaw/openclaw"
+      ],
+      "canonical_receipt": "PT-2026-03-25-github-openclaw-23317-timeout-misclassified-as-rate-limit",
+      "fix": "Add per-reason retry gate before cooldown. Timeout: retry same profile with jitter, only apply cooldown after retries exhausted. Explicit 429: still triggers immediate cooldown and rotation. Separate cooldown schedules per failure class.",
+      "note": "Inverse of standard 429 misclassification pattern. Previous receipts document 429 treated as wrong WAIT/STOP class. This documents a non-429 failure (timeout) treated as 429-equivalent \u2014 the unified failure handler is the root cause."
     }
   ],
   "detection": {
