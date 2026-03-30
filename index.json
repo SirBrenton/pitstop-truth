@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-03-29T05:41:06Z",
+  "updated_at": "2026-03-30T18:12:30Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -407,6 +407,27 @@
         "per_reason_cooldown_schedule"
       ],
       "path": "receipts/2026/03/PT-2026-03-25-github-openclaw-23317-timeout-misclassified-as-rate-limit/receipt.json"
+    },
+    {
+      "id": "PT-2026-03-30-github-claude-code-25805-rolling-window-overage-disabled",
+      "date": "2026-03-30",
+      "hazard_class": [
+        "rate_limit_429"
+      ],
+      "source_url": "https://github.com/anthropics/claude-code/issues/25805",
+      "repo": "anthropics/claude-code",
+      "signals": [
+        "anthropic-ratelimit-unified-overage-status: rejected",
+        "overage-disabled-reason: org_level_disabled",
+        "session 0% weekly 11% but hard-blocked \u2014 dashboard does not show 5h window",
+        "60s backoff does not resolve \u2014 window reset takes ~4 hours"
+      ],
+      "knobs": [
+        "anthropic-ratelimit-unified-overage-status",
+        "overage-disabled-reason",
+        "retry-after"
+      ],
+      "path": "receipts/2026/03/PT-2026-03-30-github-claude-code-25805-rolling-window-overage-disabled/receipt.json"
     }
   ]
 }
