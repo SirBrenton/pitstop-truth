@@ -1,0 +1,67 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-03-30-github-claude-code-25805-rolling-window-overage-disabled",
+  "created_at": "2026-03-30T12:00:00Z",
+  "source": {
+    "url": "https://github.com/anthropics/claude-code/issues/25805",
+    "kind": "github_issue",
+    "repo": "anthropics/claude-code",
+    "issue_or_pr": 25805,
+    "notes": "User captured live response headers showing anthropic-ratelimit-unified-overage-status: rejected with overage-disabled-reason: org_level_disabled. Session at 0%, weekly at 11% — dashboard showed no exhaustion. Error surfaced as generic 'API Error: Rate limit reached' with no indication of the 5-hour rolling window or correct wait time."
+  },
+  "hazard": {
+    "class": ["rate_limit_429"],
+    "summary": "Rolling-window exhaustion with org-level overage disabled surfaces as identical error message to throughput throttle and quota exhaustion. Correct action is wait for 5-hour window reset — not 60s backoff and not weekly reset. Systems applying wrong fix loop indefinitely.",
+    "signals": [
+      "anthropic-ratelimit-unified-overage-status: rejected",
+      "overage-disabled-reason: org_level_disabled",
+      "Session usage: 0%, Weekly usage: 11% — dashboard shows no exhaustion",
+      "Error message: API Error: Rate limit reached — identical to throughput throttle",
+      "Hard-blocks until 5-hour rolling window resets — regardless of dashboard state",
+      "Waiting 60s does not resolve — window reset takes ~4 hours"
+    ]
+  },
+  "constraints": [
+    "Rolling-window exhaustion with overage disabled must be classified as STOP — not WAIT",
+    "STOP classification must distinguish window-reset clock from weekly-reset clock",
+    "Error message must surface which limiter fired — not collapse all 429s into one message",
+    "anthropic-ratelimit-unified-overage-status header must be consulted before applying retry logic",
+    "Dashboard-visible usage metrics are insufficient to determine limit state — response headers are required"
+  ],
+  "knobs": [
+    "anthropic-ratelimit-unified-overage-status — present when rolling-window policy fires",
+    "overage-disabled-reason — distinguishes org_level_disabled from other overage states",
+    "anthropic-ratelimit-requests-remaining — throughput bucket state",
+    "anthropic-ratelimit-tokens-remaining — token bucket state",
+    "retry-after — window reset duration hint"
+  ],
+  "verification": [
+    "anthropic-ratelimit-unified-overage-status: rejected → classified as STOP, not WAIT",
+    "Error message surfaces: 'Rolling window exhausted. Resets in ~Xh' — not generic 'rate limit reached'",
+    "60s backoff not applied — system waits for window reset",
+    "Dashboard state not used as sole indicator of limit exhaustion",
+    "Three distinct cases produce three distinct error messages and actions"
+  ],
+  "notes": "This receipt documents a third distinct 429 sub-class not previously captured in the corpus. The three cases now documented: (1) throughput throttle — WAIT 60s + retry, (2) quota exhaustion — STOP until weekly reset, (3) rolling-window + overage disabled — STOP until 5-hour window resets. All three currently surface as 'API Error: Rate limit reached' in Claude Code CLI. The anthropic-ratelimit-unified-overage-status header is the classification signal for case 3. Primary evidence: live response headers captured by affected user, session 0% / weekly 11% at time of failure. The dashboard does not expose 5-hour window utilization, making this failure class invisible to users.",
+  "tags": ["rate_limit", "429", "stop", "rolling-window", "overage", "org-policy", "anthropic", "claude-code", "error-taxonomy-collapse", "dashboard-blind-spot"],
+  "mitigation_signature": {
+    "hazards": ["rate_limit_429"],
+    "constraints": ["rolling_window_classified_as_stop", "overage_header_consulted_before_retry", "distinct_error_messages_per_limit_type"],
+    "knobs": ["anthropic-ratelimit-unified-overage-status", "overage-disabled-reason", "retry-after"],
+    "anti_patterns": ["all_429s_treated_as_throughput", "dashboard_state_as_sole_indicator", "60s_backoff_on_window_exhaustion"]
+  },
+  "routing_impact": {
+    "default_action": "fail_fast",
+    "cooldown_source": "server_hint",
+    "cooldown_scope_key": "provider:anthropic:unified-overage:org_level",
+    "during_cooldown": {
+      "make_http_call": false,
+      "eligible_for_routing": false,
+      "emit_decision_event": true
+    },
+    "after_cooldown": {
+      "probe_strategy": "single_flight",
+      "max_probe_qps": 1
+    }
+  }
+}
