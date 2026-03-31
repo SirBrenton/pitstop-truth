@@ -1,0 +1,90 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-03-31-github-openclaw-58442-quota-window-429-failover-gap",
+  "created_at": "2026-03-31T23:59:00Z",
+  "source": {
+    "url": "https://github.com/openclaw/openclaw/issues/58442",
+    "kind": "github_issue",
+    "repo": "openclaw/openclaw",
+    "issue_or_pr": 58442
+  },
+  "hazard": {
+    "class": [
+      "rate_limit_429",
+      "retry_budget_exhausted"
+    ],
+    "summary": "Quota-window exhaustion returns HTTP 429 but is misclassified as transient retryable pressure, so model failover never triggers and the same message is reprocessed repeatedly.",
+    "signals": [
+      "HTTP 429 with body: \"You have exceeded the 5-hour usage quota. It will reset at ...\"",
+      "Contrasting transient 429 body: \"Requests are too frequent. Please reduce your request frequency, wait a short moment, and retry your request.\"",
+      "Same msgId observed 95+ times in session JSONL",
+      "No occurrences of configured fallback model in session logs",
+      "Failover docs expect rate-limit or billing failures to route away from failing model"
+    ]
+  },
+  "constraints": [
+    "HTTP status alone is insufficient for 429 classification; body semantics must determine retryable vs failover-worthy behavior.",
+    "Quota-window exhaustion with explicit reset time must not follow the same branch as transient request-frequency throttling.",
+    "When a quota-window STOP case is detected, the current model must not continue local retry or reprocessing loops.",
+    "Repeated processing of the same message without fallback progression must be treated as a control failure, not ordinary retry."
+  ],
+  "knobs": [
+    "429 semantic classifier using provider body patterns",
+    "message-pattern rules for transient vs quota-window 429",
+    "failover trigger threshold for non-retryable 429 classes",
+    "duplicate message or repeated msgId guard",
+    "cooldown or stop-until-reset policy for quota-window exhaustion"
+  ],
+  "verification": [
+    "Replay two 429 cases: (a) transient \"too frequent\" and (b) quota-window \"usage quota ... will reset at\".",
+    "Verify transient 429 takes WAIT path (retry/backoff) and does not trigger failover immediately.",
+    "Verify quota-window 429 takes STOP or failover-worthy path and routes to configured fallback model.",
+    "Verify same inbound message is processed once and does not reappear repeatedly in session JSONL.",
+    "Verify fallback model appears in execution trace when primary model hits quota-window exhaustion.",
+    "Verify reset-time-bearing quota-window errors do not remain in the same retry loop."
+  ],
+  "notes": "This receipt is strong because it contrasts two different semantic 429 classes under the same HTTP status. The failure is not generic 'rate limiting'; it is wrong branch selection inside failover logic. The issue includes a concrete transient 429 body and a quota-window 429 body, making the classification boundary legible even without response headers. A linked PR (#58458) was opened shortly after the issue, which increases confidence that the pattern is implementation-relevant and not merely theoretical.",
+  "tags": [
+    "429",
+    "failover",
+    "quota-window",
+    "retry-classification",
+    "openclaw",
+    "loop-amplification"
+  ],
+  "mitigation_signature": {
+    "hazards": [
+      "rate_limit_429",
+      "retry_budget_exhausted"
+    ],
+    "constraints": [
+      "classify 429 by semantic body, not status alone",
+      "quota-window reset-bearing 429s are failover-worthy STOP cases",
+      "same-message reprocessing must not continue after non-retryable 429"
+    ],
+    "knobs": [
+      "429 semantic classifier",
+      "failover trigger",
+      "duplicate message guard"
+    ],
+    "anti_patterns": [
+      "same HTTP status collapsed into one retry branch",
+      "quota exhaustion treated as transient pressure",
+      "fallback chain bypassed while primary model keeps erroring"
+    ]
+  },
+  "routing_impact": {
+    "default_action": "cooldown_and_route_away",
+    "cooldown_source": "server_hint",
+    "cooldown_scope_key": "provider:model:quota_window",
+    "during_cooldown": {
+      "make_http_call": false,
+      "eligible_for_routing": false,
+      "emit_decision_event": true
+    },
+    "after_cooldown": {
+      "probe_strategy": "single_flight",
+      "max_probe_qps": 0.1
+    }
+  }
+}
