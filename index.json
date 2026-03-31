@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-03-30T18:12:30Z",
+  "updated_at": "2026-03-31T18:25:17Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -428,6 +428,28 @@
         "retry-after"
       ],
       "path": "receipts/2026/03/PT-2026-03-30-github-claude-code-25805-rolling-window-overage-disabled/receipt.json"
+    },
+    {
+      "id": "PT-2026-03-31-github-openclaw-58442-quota-window-429-failover-gap",
+      "date": "2026-03-31",
+      "hazard_class": [
+        "rate_limit_429",
+        "retry_budget_exhausted"
+      ],
+      "source_url": "https://github.com/openclaw/openclaw/issues/58442",
+      "repo": "openclaw/openclaw",
+      "signals": [
+        "429 body: exceeded the 5-hour usage quota",
+        "429 body: requests are too frequent",
+        "same msgId repeated 95+ times",
+        "fallback model never triggered"
+      ],
+      "knobs": [
+        "429 semantic classifier",
+        "failover trigger threshold",
+        "duplicate message guard"
+      ],
+      "path": "receipts/2026/03/PT-2026-03-31-github-openclaw-58442-quota-window-429-failover-gap/receipt.json"
     }
   ]
 }
