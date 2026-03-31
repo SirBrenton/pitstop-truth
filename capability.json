@@ -1,12 +1,12 @@
 {
   "schema": "pitstop-capability.v0",
   "name": "pitstop-truth",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Machine-readable corpus of AI/API execution failure patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, and concurrency amplification \u2014 classified, verified, and cross-referenced across production systems.",
   "capability": "execution_failure_classification",
   "thesis": "When AI pipelines hit rate limits and timeouts, they often respond incorrectly \u2014 amplifying pressure instead of absorbing it. This corpus documents how, where, and why.",
   "corpus": {
-    "receipts": 22,
+    "receipts": 23,
     "hazard_classes": [
       "rate_limit_429",
       "timeout_deadline",
@@ -26,7 +26,7 @@
     ],
     "date_range": {
       "earliest": "2025-07-15",
-      "latest": "2026-03-30"
+      "latest": "2026-03-31"
     }
   },
   "query": {
@@ -155,6 +155,18 @@
       "canonical_receipt": "PT-2026-03-30-github-claude-code-25805-rolling-window-overage-disabled",
       "fix": "Consult anthropic-ratelimit-unified-overage-status before applying retry logic. rejected + org_level_disabled = STOP until unified-5h-reset timestamp. Do not apply 60s backoff. Surface correct wait time to caller.",
       "note": "Third distinct 429 sub-class now documented. All three surface as identical error message: (1) throughput throttle \u2014 WAIT 60s, (2) quota exhaustion \u2014 STOP weekly reset, (3) rolling-window overage disabled \u2014 STOP 5h window reset. Smoking gun: unified-5h-utilization near 1.0 + unified-status: blocked + unified-overage-status: rejected. Full anthropic-ratelimit-unified-* header schema confirmed via post-resolution capture. Dashboard does not expose 5h window utilization."
+    },
+    {
+      "id": "quota-window-429-failover-gap",
+      "hazard": "rate_limit_429",
+      "summary": "Two provider responses share the same HTTP 429 status but require different branches: transient request-frequency pressure is retryable, while quota-window exhaustion with reset time is failover-worthy STOP. When status is used without semantic body classification, failover never triggers and the same message is reprocessed repeatedly.",
+      "classification": "STOP misclassified as WAIT inside failover path",
+      "confirmed_in": [
+        "openclaw/openclaw"
+      ],
+      "canonical_receipt": "PT-2026-03-31-github-openclaw-58442-quota-window-429-failover-gap",
+      "fix": "Classify 429s by semantic body, not status alone. Transient 'too frequent' errors take WAIT/backoff. 'Usage quota' plus 'will reset at' takes STOP/failover until reset. Do not let both share the same retry branch.",
+      "note": "Strong receipt because it contrasts two semantic 429 classes under the same status code using real issue evidence. Observed consequence: same inbound message reprocessed 95+ times with zero fallback progression. Linked fix PR #58458 opened immediately after the issue."
     }
   ],
   "detection": {
@@ -180,5 +192,5 @@
   },
   "contact": "brentondwilliams@gmail.com",
   "license": "Apache-2.0",
-  "last_updated": "2026-03-30"
+  "last_updated": "2026-03-31"
 }
