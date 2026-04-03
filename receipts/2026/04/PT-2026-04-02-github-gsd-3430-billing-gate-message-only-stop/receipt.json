@@ -1,0 +1,89 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-04-02-github-gsd-3430-billing-gate-message-only-stop",
+  "created_at": "2026-04-02T00:00:00Z",
+  "source": {
+    "url": "https://github.com/gsd-build/gsd-2/issues/3430",
+    "kind": "github_issue",
+    "repo": "gsd-build/gsd-2",
+    "issue_or_pr": 3430
+  },
+  "hazard": {
+    "class": [
+      "rate_limit_429"
+    ],
+    "summary": "Anthropic long-context billing gate returns HTTP 429 with no Retry-After header and no time-bound signal. Message body is the only classification signal. Correct hazard class (quota_exhausted) was identified but enforcement action was scoped to the API credential instead of the billing gate, blocking all provider requests for 30 minutes including models unaffected by the long-context gate.",
+    "signals": [
+      "HTTP 429 with body: \"Extra usage is required for long context requests.\"",
+      "No Retry-After header present — confirmed by header extraction trace",
+      "No x-ratelimit-reset-requests or x-ratelimit-reset-tokens headers present",
+      "Message body is the only distinguishing signal available",
+      "Provider-wide credential backoff applied for 30 minutes",
+      "Subsequent requests to unaffected models blocked internally before reaching Anthropic"
+    ]
+  },
+  "constraints": [
+    "Message body must be inspected when Retry-After is absent — status code alone is insufficient.",
+    "Billing gate errors must not trigger credential-scoped backoff — the gate is account-level, not credential-level.",
+    "Backoff scope must match the scope of the error condition: long-context gate → model/feature scope, not provider-wide credential scope.",
+    "A quota_exhausted classification must not automatically inherit credential backoff behavior."
+  ],
+  "knobs": [
+    "billing gate message pattern matching",
+    "backoff scope: credential vs model vs feature gate",
+    "isCredentialError flag for quota_exhausted subclasses",
+    "BACKOFF_QUOTA_EXHAUSTED_MS applied scope"
+  ],
+  "verification": [
+    "Trigger long-context 429 on claude-sonnet-4-6.",
+    "Verify subsequent requests to claude-opus-4-6 succeed immediately.",
+    "Verify no provider-wide credential backoff is applied.",
+    "Verify Retry-After absence is handled without fallback to credential backoff.",
+    "Verify message-body classification correctly identifies billing gate vs transient rate limit."
+  ],
+  "notes": "This receipt documents two distinct failure shapes in one case: (1) message-only classification — the billing gate sends no Retry-After, making the error body the sole classification signal; (2) correct class, wrong enforcement scope — quota_exhausted was correctly identified but BACKOFF_QUOTA_EXHAUSTED_MS was applied to the API credential rather than the specific billing gate. The prior fix (PR #3257) corrected the error type from rate_limit to quota_exhausted but made the observable impact worse by extending backoff from 30 seconds to 30 minutes. Confirmed by author tracing header extraction path in anthropic-shared.js — retryAfterMs absent from persisted error entry.",
+  "tags": [
+    "429",
+    "billing-gate",
+    "message-only-classification",
+    "enforcement-scope",
+    "quota-exhausted",
+    "anthropic",
+    "long-context",
+    "credential-backoff"
+  ],
+  "mitigation_signature": {
+    "hazards": [
+      "rate_limit_429"
+    ],
+    "constraints": [
+      "message body is the classification signal when Retry-After is absent",
+      "billing gate backoff must not scope to credential",
+      "correct hazard class does not guarantee correct enforcement scope"
+    ],
+    "knobs": [
+      "billing gate message pattern",
+      "backoff scope",
+      "isCredentialError flag"
+    ],
+    "anti_patterns": [
+      "applying credential backoff to account-level billing gates",
+      "inheriting backoff duration from hazard class without checking scope",
+      "assuming Retry-After presence for all quota_exhausted cases"
+    ]
+  },
+  "routing_impact": {
+    "default_action": "cooldown_and_route_away",
+    "cooldown_source": "none",
+    "cooldown_scope_key": "provider:feature:long_context_gate",
+    "during_cooldown": {
+      "make_http_call": false,
+      "eligible_for_routing": true,
+      "emit_decision_event": true
+    },
+    "after_cooldown": {
+      "probe_strategy": "single_flight",
+      "max_probe_qps": 0.1
+    }
+  }
+}
