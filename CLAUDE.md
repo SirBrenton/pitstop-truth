@@ -2,11 +2,9 @@
 
 ## What this repo is
 
-Machine-readable corpus of execution failure receipts.
-25 receipts. 13 documented patterns. capability.json v0.1.9.
+Machine-readable corpus of execution failure receipts. 25 receipts. 13 documented patterns. capability.json v0.1.9.
 
-Every receipt documents a real production failure —
-classified, verified, and cross-referenced across systems.
+Every receipt documents a real production failure — classified, verified, and cross-referenced across systems.
 
 ## The taxonomy
 
@@ -14,8 +12,7 @@ WAIT — transient pressure. Retry after Retry-After duration.
 CAP  — concurrency/throughput pressure. Reduce parallel requests first.
 STOP — quota exhaustion or terminal error. Do not retry.
 
-HTTP status alone is insufficient. Two 429s can require
-opposite actions depending on body content and headers.
+HTTP status alone is insufficient. Two 429s can require opposite actions depending on body content and headers.
 
 ## Receipt worthiness filter
 
@@ -31,20 +28,16 @@ A candidate qualifies ONLY if ALL three are true:
 3. Fix has leverage
    — changes outcomes, not just narrates them
 
-If it wouldn't help a different team six months from now,
-don't capture it.
+If it wouldn't help a different team six months from now, don't capture it.
 
 ## What makes a receipt strong
 
 - Primary evidence: real logs, headers, error bodies
-- Contrast: two failure shapes that look identical but
-  require different responses
+- Contrast: two failure shapes that look identical but require different responses
 - Consequence: what actually broke downstream
 - Scope: how far the failure propagated
 
-The GSD billing-gate receipt (PT-2026-04-02) is a strong
-example — documents correct classification with wrong
-enforcement scope, confirmed by author tracing the code.
+The GSD billing-gate receipt (PT-2026-04-02) is a strong example — documents correct classification with wrong enforcement scope, confirmed by author tracing the code.
 
 ## What to skip immediately
 
@@ -68,8 +61,7 @@ PT-YYYY-MM-DD-github-{repo-slug}-{short-description}
 
 ## The ask that follows a good diagnosis
 
-"If you can share one redacted response (status + headers +
-error body), I can reduce this to the minimal decision rule."
+"If you can share one redacted response (status + headers + error body), I can reduce this to the minimal decision rule."
 
 ## Current failure classes documented
 
@@ -89,8 +81,7 @@ error body), I can reduce this to the minimal decision rule."
 
 ## Classifier endpoint
 
-POST https://web-production-273d3.up.railway.app/classify
-{"status":429,"headers":{"retry-after":"30"},"provider":"anthropic"}
+POST https://web-production-273d3.up.railway.app/classify {"status":429,"headers":{"retry-after":"30"},"provider":"anthropic"}
 
 retry-after: 30   → WAIT
 retry-after: 600  → STOP
