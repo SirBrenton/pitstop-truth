@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-03-31T18:25:17Z",
+  "updated_at": "2026-04-03T00:36:41Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -450,6 +450,27 @@
         "duplicate message guard"
       ],
       "path": "receipts/2026/03/PT-2026-03-31-github-openclaw-58442-quota-window-429-failover-gap/receipt.json"
+    },
+    {
+      "id": "PT-2026-04-02-github-gsd-3430-billing-gate-message-only-stop",
+      "date": "2026-04-02",
+      "hazard_class": [
+        "rate_limit_429"
+      ],
+      "source_url": "https://github.com/gsd-build/gsd-2/issues/3430",
+      "repo": "gsd-build/gsd-2",
+      "signals": [
+        "429 body: Extra usage is required for long context requests",
+        "no Retry-After header present",
+        "provider-wide credential backoff 30 minutes",
+        "subsequent model requests blocked internally"
+      ],
+      "knobs": [
+        "billing gate message pattern",
+        "backoff scope",
+        "isCredentialError flag"
+      ],
+      "path": "receipts/2026/04/PT-2026-04-02-github-gsd-3430-billing-gate-message-only-stop/receipt.json"
     }
   ]
 }
