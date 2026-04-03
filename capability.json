@@ -1,12 +1,12 @@
 {
   "schema": "pitstop-capability.v0",
   "name": "pitstop-truth",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Machine-readable corpus of AI/API execution failure patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, and concurrency amplification \u2014 classified, verified, and cross-referenced across production systems.",
   "capability": "execution_failure_classification",
   "thesis": "When AI pipelines hit rate limits and timeouts, they often respond incorrectly \u2014 amplifying pressure instead of absorbing it. This corpus documents how, where, and why.",
   "corpus": {
-    "receipts": 23,
+    "receipts": 24,
     "hazard_classes": [
       "rate_limit_429",
       "timeout_deadline",
@@ -22,11 +22,12 @@
       "svix/svix-webhooks",
       "hivemoot/hivemoot-agent",
       "massgen/MassGen",
-      "nicklvsa/claude-hud"
+      "nicklvsa/claude-hud",
+      "gsd-build/gsd-2"
     ],
     "date_range": {
       "earliest": "2025-07-15",
-      "latest": "2026-03-31"
+      "latest": "2026-04-02"
     }
   },
   "query": {
@@ -167,6 +168,18 @@
       "canonical_receipt": "PT-2026-03-31-github-openclaw-58442-quota-window-429-failover-gap",
       "fix": "Classify 429s by semantic body, not status alone. Transient 'too frequent' errors take WAIT/backoff. 'Usage quota' plus 'will reset at' takes STOP/failover until reset. Do not let both share the same retry branch.",
       "note": "Strong receipt because it contrasts two semantic 429 classes under the same status code using real issue evidence. Observed consequence: same inbound message reprocessed 95+ times with zero fallback progression. Linked fix PR #58458 opened immediately after the issue."
+    },
+    {
+      "id": "billing-gate-message-only-wrong-enforcement-scope",
+      "hazard": "rate_limit_429",
+      "summary": "Anthropic long-context billing gate returns HTTP 429 with no Retry-After and no time-bound headers. Message body is the only classification signal. Correct hazard class (quota_exhausted) was identified but enforcement action was scoped to the API credential instead of the billing gate, blocking all provider requests for 30 minutes.",
+      "classification": "Correct hazard class — wrong enforcement scope",
+      "confirmed_in": [
+        "gsd-build/gsd-2"
+      ],
+      "canonical_receipt": "PT-2026-04-02-github-gsd-3430-billing-gate-message-only-stop",
+      "fix": "Scope backoff to the specific gate that triggered it, not the API credential. Billing gate errors are account-level conditions — credential backoff has no effect on the error condition and blocks unaffected models.",
+      "note": "First documented case of correct hazard class with wrong enforcement scope. Previous receipts document wrong hazard class → wrong action. This case shows correct classification is necessary but not sufficient — enforcement scope must match the scope of the error condition. Also first receipt confirming a 429 subclass with no header signal — message body is the sole classification input."
     }
   ],
   "detection": {
