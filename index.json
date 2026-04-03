@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-04-03T00:36:41Z",
+  "updated_at": "2026-04-03T15:02:43Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -471,6 +471,29 @@
         "isCredentialError flag"
       ],
       "path": "receipts/2026/04/PT-2026-04-02-github-gsd-3430-billing-gate-message-only-stop/receipt.json"
+    },
+    {
+      "id": "PT-2026-04-02-github-omp-607-stop-parent-child-propagation",
+      "date": "2026-04-02",
+      "hazard_class": [
+        "rate_limit_429",
+        "retry_budget_exhausted"
+      ],
+      "source_url": "https://github.com/can1357/oh-my-pi/issues/607",
+      "repo": "can1357/oh-my-pi",
+      "signals": [
+        "429 rate_limit_error: This request would exceed your account's rate limit",
+        "retry-after-ms=11180000 on child task A",
+        "retry-after-ms=11179000 on child task B",
+        "parent session stuck in-progress over an hour",
+        "two parallel child tasks hitting same account limit simultaneously"
+      ],
+      "knobs": [
+        "retry-after STOP threshold",
+        "child-to-parent STOP propagation",
+        "concurrent agent quota awareness"
+      ],
+      "path": "receipts/2026/04/PT-2026-04-02-github-omp-607-stop-parent-child-propagation/receipt.json"
     }
   ]
 }

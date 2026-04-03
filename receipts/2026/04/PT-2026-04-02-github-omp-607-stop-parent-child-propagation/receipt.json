@@ -1,0 +1,95 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-04-02-github-omp-607-stop-parent-child-propagation",
+  "created_at": "2026-04-02T00:00:00Z",
+  "source": {
+    "url": "https://github.com/can1357/oh-my-pi/issues/607",
+    "kind": "github_issue",
+    "repo": "can1357/oh-my-pi",
+    "issue_or_pr": 607
+  },
+  "hazard": {
+    "class": [
+      "rate_limit_429",
+      "retry_budget_exhausted"
+    ],
+    "summary": "Two parallel spawned child task agents hit the same account-level rate limit simultaneously. Each receives HTTP 429 with retry-after-ms ~11180000 (~3 hours). The STOP condition is not propagated to the parent session, which continues to appear in-progress for over an hour until manually cancelled.",
+    "signals": [
+      "HTTP 429 with body: {\"type\":\"error\",\"error\":{\"type\":\"rate_limit_error\",\"message\":\"This request would exceed your account's rate limit. Please try again later.\"}}",
+      "retry-after-ms=11180000 (~3 hours) on child task A",
+      "retry-after-ms=11179000 (~3 hours) on child task B",
+      "Two parallel child tasks hitting same account-level limit simultaneously",
+      "Parent session stuck in review phase for over an hour",
+      "Recovery only possible via manual cancellation",
+      "stopReason=error in both child session JSONL logs"
+    ]
+  },
+  "constraints": [
+    "retry-after values exceeding a configurable threshold must be classified as STOP, not retryable pressure.",
+    "STOP conditions in child tasks must be propagated to the parent session immediately.",
+    "Parent session must not appear in-progress when all child tasks are blocked on STOP conditions.",
+    "Concurrent spawned agents sharing the same account limits must be treated as a shared quota pool, not independent retry units.",
+    "retry-after-ms must be surfaced to the parent so it knows when recovery is possible."
+  ],
+  "knobs": [
+    "retry-after threshold for STOP classification",
+    "child-to-parent STOP propagation",
+    "parent session state when child tasks are blocked",
+    "concurrent child agent quota awareness",
+    "fail-fast or timeout behavior for long retry windows"
+  ],
+  "verification": [
+    "Spawn two parallel child task agents against a rate-limited account.",
+    "Verify both children surface STOP immediately on retry-after > threshold.",
+    "Verify parent session reflects blocked state within seconds of child STOP.",
+    "Verify parent does not remain in-progress when all children are blocked.",
+    "Verify retry-after value is visible in parent session state.",
+    "Verify no retry loop is entered for retry-after values exceeding threshold."
+  ],
+  "notes": "First receipt documenting STOP propagation failure in a parent/child multi-agent session. Previous receipts document STOP misclassification within a single retry loop. This case shows STOP classified correctly at the child level but not propagated upward — the parent has no visibility into child blocked state. Confirmed via real JSONL session logs from two parallel child agents. Both hit the same Anthropic account-level rate limit within 1 second of each other (timestamps 1775148765808 and 1775148765804), consistent with concurrent spawned agents sharing a single account quota pool.",
+  "tags": [
+    "429",
+    "stop",
+    "parent-child",
+    "multi-agent",
+    "propagation",
+    "anthropic",
+    "rate-limit",
+    "concurrent-agents"
+  ],
+  "mitigation_signature": {
+    "hazards": [
+      "rate_limit_429",
+      "retry_budget_exhausted"
+    ],
+    "constraints": [
+      "retry-after > threshold → STOP, not retryable",
+      "child STOP must propagate to parent immediately",
+      "parent must not appear in-progress when children are blocked"
+    ],
+    "knobs": [
+      "retry-after STOP threshold",
+      "child-to-parent state propagation",
+      "concurrent agent quota awareness"
+    ],
+    "anti_patterns": [
+      "parent session remaining in-progress while children are blocked",
+      "STOP condition silently absorbed at child level",
+      "concurrent agents treated as independent quota consumers"
+    ]
+  },
+  "routing_impact": {
+    "default_action": "fail_fast",
+    "cooldown_source": "retry_after_header",
+    "cooldown_scope_key": "account:provider:rate_limit",
+    "during_cooldown": {
+      "make_http_call": false,
+      "eligible_for_routing": false,
+      "emit_decision_event": true
+    },
+    "after_cooldown": {
+      "probe_strategy": "single_flight",
+      "max_probe_qps": 0.1
+    }
+  }
+}
