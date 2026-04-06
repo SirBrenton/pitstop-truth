@@ -1,0 +1,91 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-04-05-github-oh-my-openagent-3126-stop-name-known-retry-collapsed",
+  "created_at": "2026-04-05T22:00:00Z",
+  "source": {
+    "url": "https://github.com/code-yeongyu/oh-my-openagent/issues/3126",
+    "kind": "github_issue",
+    "repo": "code-yeongyu/oh-my-openagent",
+    "issue_or_pr": 3126
+  },
+  "hazard": {
+    "class": [
+      "rate_limit_429",
+      "retry_budget_exhausted"
+    ],
+    "summary": "Quota exhaustion and transient rate-limit errors were lexically distinguished but still collapsed into the same retry decision, causing STOP cases to enter fallback retry.",
+    "signals": [
+      "model-error-classifier.ts separates quotaexceedederror from ratelimiterror",
+      "isRetryableModelError returned true for both",
+      "quota exhaustion entered the same fallback retry path as transient pressure",
+      "maintainer added STOP_MESSAGE_PATTERNS",
+      "STOP_MESSAGE_PATTERNS take precedence over RETRYABLE_MESSAGE_PATTERNS",
+      "message-only quota and billing errors now return non-retryable",
+      "4 regression tests added for quota STOP cases"
+    ]
+  },
+  "constraints": [
+    "A retry classifier must not collapse transient rate-limit errors and quota exhaustion into the same boolean retry decision.",
+    "STOP signals must short-circuit retry and fallback behavior immediately.",
+    "Message-only quota and billing signals must be checked before generic retryable patterns.",
+    "Classifier precedence must ensure terminal quota patterns outrank generic retry patterns."
+  ],
+  "knobs": [
+    "stop_error_names",
+    "stop_message_patterns",
+    "retryable_message_patterns",
+    "classifier_precedence_order",
+    "fallback_on_stop"
+  ],
+  "verification": [
+    "Trigger a transient rate-limit error and confirm retry/fallback still occurs for WAIT cases.",
+    "Trigger quotaexceedederror and confirm isRetryableModelError no longer routes it into fallback retry.",
+    "Trigger a message-only quota or billing error with no explicit error name and confirm STOP_MESSAGE_PATTERNS causes an immediate non-retryable result.",
+    "Run regression tests covering both named STOP cases and message-only STOP cases."
+  ],
+  "notes": "This receipt is strong because the system already had partial taxonomy awareness: quotaexceedederror was separated from ratelimiterror by name, but both still returned true from the retry classifier. The failure was not absence of taxonomy but failure to enforce it at the decision point. The fix broadened the lesson by adding STOP_MESSAGE_PATTERNS and making them take precedence over RETRYABLE_MESSAGE_PATTERNS, plus regression tests. This generalizes to any runtime where lexically distinct error categories are still collapsed behaviorally into a single retry branch.",
+  "tags": [
+    "rate_limit",
+    "quota_exhaustion",
+    "stop",
+    "error_classifier",
+    "fallback",
+    "message_pattern",
+    "precedence"
+  ],
+  "mitigation_signature": {
+    "hazards": [
+      "stop_case_collapsed_into_retryable_boolean",
+      "message_only_quota_retry"
+    ],
+    "constraints": [
+      "stop_signals_must_short_circuit_retry",
+      "message_only_stop_patterns_precede_retryable_patterns",
+      "fallback_requires_semantic_class_not_boolean"
+    ],
+    "knobs": [
+      "stop_error_names",
+      "stop_message_patterns",
+      "pattern_precedence"
+    ],
+    "anti_patterns": [
+      "boolean_retry_classifier_for_semantically_distinct_errors",
+      "retryable_message_patterns_checked_before_terminal_quota_patterns",
+      "taxonomy_present_but_not_enforced"
+    ]
+  },
+  "routing_impact": {
+    "default_action": "fail_fast",
+    "cooldown_source": "server_hint",
+    "cooldown_scope_key": "provider:quota_or_billing_gate",
+    "during_cooldown": {
+      "make_http_call": false,
+      "eligible_for_routing": false,
+      "emit_decision_event": true
+    },
+    "after_cooldown": {
+      "probe_strategy": "single_flight",
+      "max_probe_qps": 0.1
+    }
+  }
+}
