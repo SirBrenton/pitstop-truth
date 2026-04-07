@@ -1,0 +1,88 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-04-06-github-gsd-3548-recovery-message-retry-self-match",
+  "created_at": "2026-04-06T00:00:00Z",
+  "source": {
+    "url": "https://github.com/gsd-build/gsd-2/pull/3548",
+    "kind": "github_pr",
+    "repo": "gsd-build/gsd-2",
+    "issue_or_pr": 3548
+  },
+  "hazard": {
+    "class": [
+      "rate_limit_429",
+      "retry_budget_exhausted"
+    ],
+    "summary": "An internally-generated credential cooldown message contained rate-limit language that matched the retryable error classifier, causing the retry handler to re-enter on its own synthesized recovery-path error. A single upstream 429 could produce cascading empty assistant error entries and break session resume.",
+    "signals": [
+      "internally-generated credential cooldown message matched isRetryableError regex",
+      "cooldown message contained rate-limit language",
+      "single Anthropic 429 produced 3-4 cascading empty assistant error entries",
+      "session resume corrupted after repeated empty error entries",
+      "PR #3548 removed or reworded internal cooldown error so it no longer matched retryable patterns"
+    ]
+  },
+  "constraints": [
+    "Internally-generated cooldown or recovery messages must never match external retryable error classifiers.",
+    "Retry handlers must not re-enter on their own synthesized error text.",
+    "Recovery-path wording must be lexically disjoint from retry-trigger patterns.",
+    "A single upstream 429 must not fan out into repeated internal error entries."
+  ],
+  "knobs": [
+    "isRetryableError regex / retryable pattern set",
+    "internal cooldown error wording",
+    "retry-handler re-entry guard",
+    "session error append logic"
+  ],
+  "verification": [
+    "Trigger a provider 429 that enters the internal cooldown path.",
+    "Verify the cooldown message no longer matches retryable error patterns.",
+    "Verify the retry handler does not re-enter on synthesized cooldown errors.",
+    "Verify only one user-visible error is emitted for the incident.",
+    "Verify session resume remains intact with no cascading empty assistant entries."
+  ],
+  "notes": "This is distinct from PT-2026-04-02-github-gsd-3430-billing-gate-message-only-stop. The earlier receipt captured message-only STOP classification and wrong enforcement scope. This receipt captures a second-order recovery-path failure: the system's own cooldown/recovery text was classified as retryable, causing recursive retry handling and cascading empty session errors. The merged fix in PR #3548 explicitly removed or reworded the internal cooldown message path so it would not match the retry classifier.",
+  "tags": [
+    "429",
+    "retry-cascade",
+    "internal-error",
+    "recovery-path",
+    "session-corruption",
+    "control-plane"
+  ],
+  "mitigation_signature": {
+    "hazards": [
+      "rate_limit_429",
+      "retry_budget_exhausted"
+    ],
+    "constraints": [
+      "internal recovery text must not trigger retry classification",
+      "retry handlers must not re-enter on synthesized errors",
+      "single 429 must not create cascading internal error entries"
+    ],
+    "knobs": [
+      "retry regex pattern set",
+      "internal cooldown wording",
+      "re-entry guard"
+    ],
+    "anti_patterns": [
+      "using the same lexical markers for external rate limits and internal cooldown messages",
+      "retry classifier matching recovery-path text",
+      "recovery handler recursively re-triggering itself"
+    ]
+  },
+  "routing_impact": {
+    "default_action": "fail_fast",
+    "cooldown_source": "none",
+    "cooldown_scope_key": "provider:internal-cooldown",
+    "during_cooldown": {
+      "make_http_call": false,
+      "eligible_for_routing": false,
+      "emit_decision_event": true
+    },
+    "after_cooldown": {
+      "probe_strategy": "single_flight",
+      "max_probe_qps": 0.1
+    }
+  }
+}
