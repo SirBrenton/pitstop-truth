@@ -1,12 +1,12 @@
 {
   "schema": "pitstop-capability.v0",
   "name": "pitstop-truth",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "description": "Machine-readable corpus of AI/API execution failure patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, and concurrency amplification \u2014 classified, verified, and cross-referenced across production systems.",
   "capability": "execution_failure_classification",
   "thesis": "When AI pipelines hit rate limits and timeouts, they often respond incorrectly \u2014 amplifying pressure instead of absorbing it. This corpus documents how, where, and why.",
   "corpus": {
-    "receipts": 26,
+    "receipts": 27,
     "hazard_classes": [
       "rate_limit_429",
       "timeout_deadline",
@@ -29,7 +29,7 @@
     ],
     "date_range": {
       "earliest": "2025-07-15",
-      "latest": "2026-04-05"
+      "latest": "2026-04-06"
     }
   },
   "query": {
@@ -206,7 +206,19 @@
       "canonical_receipt": "PT-2026-04-05-github-oh-my-openagent-3126-stop-name-known-retry-collapsed",
       "fix": "STOP cases must short-circuit retry and fallback behavior. Message-only quota and billing patterns must be checked before generic retryable patterns, and classifier precedence must ensure terminal quota conditions do not enter retry paths.",
       "note": "This is a more mature failure mode than missing Retry-After or missing taxonomy entirely. The system already knew quota exhaustion was different, but the decision function still returned the same retryable result. The fix added STOP_MESSAGE_PATTERNS, precedence over RETRYABLE_MESSAGE_PATTERNS, and regression tests."
-    } 
+    },
+    {
+      "id": "recovery-path-self-match",
+      "hazard": "rate_limit_429",
+      "summary": "An internally-generated cooldown or recovery message matched the retry classifier and re-entered the retry path. A single upstream 429 amplified into cascading internal error entries and session corruption.",
+      "classification": "Internal recovery text treated as external retryable failure",
+      "confirmed_in": [
+        "gsd-build/gsd-2"
+      ],
+      "canonical_receipt": "PT-2026-04-06-github-gsd-3548-recovery-message-retry-self-match",
+      "fix": "Recovery-path messages must be lexically disjoint from retryable error patterns. Retry handlers must not re-enter on synthesized cooldown errors, and internal control-plane messages must fail fast instead of being reclassified as external retryable events.",
+      "note": "This is distinct from header/classification mistakes. The upstream 429 may be classified correctly, but the system's own internally-generated cooldown message can still match retry regexes and recursively trigger recovery logic. This creates a control-plane retry cascade independent of the provider."
+    }
   ],
   "detection": {
     "tool": "pitstop-check",
@@ -231,5 +243,5 @@
   },
   "contact": "brentondwilliams@gmail.com",
   "license": "Apache-2.0",
-  "last_updated": "2026-04-05"
+  "last_updated": "2026-04-06"
 }
