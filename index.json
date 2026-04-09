@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-04-07T12:56:01Z",
+  "updated_at": "2026-04-09T16:10:50Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -537,6 +537,28 @@
         "retry-handler re-entry guard"
       ],
       "path": "receipts/2026/04/PT-2026-04-06-github-gsd-3548-recovery-message-retry-self-match/receipt.json"
+    },
+    {
+      "id": "PT-2026-04-09-github-agentgateway-1500-headerless-429-body-failover-gap",
+      "date": "2026-04-09",
+      "hazard_class": [
+        "rate_limit_429",
+        "failover_skips_viable_fallback"
+      ],
+      "source_url": "https://github.com/agentgateway/agentgateway/issues/1500",
+      "repo": "agentgateway/agentgateway",
+      "signals": [
+        "HTTP 429 without Retry-After header",
+        "HTTP 429 without x-ratelimit-reset header",
+        "body status RESOURCE_EXHAUSTED",
+        "failover gated on retry/reset headers"
+      ],
+      "knobs": [
+        "429 failover trigger condition",
+        "body-semantic classification for headerless 429s",
+        "backend eviction duration on 429"
+      ],
+      "path": "receipts/2026/04/PT-2026-04-09-github-agentgateway-1500-headerless-429-body-failover-gap/receipt.json"
     }
   ]
 }

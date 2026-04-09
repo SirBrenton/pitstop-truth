@@ -1,0 +1,94 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-04-09-github-agentgateway-1500-headerless-429-body-failover-gap",
+  "created_at": "2026-04-09T00:00:00Z",
+  "source": {
+    "url": "https://github.com/agentgateway/agentgateway/issues/1500",
+    "kind": "github_issue",
+    "repo": "agentgateway/agentgateway",
+    "issue_or_pr": 1500
+  },
+  "hazard": {
+    "class": [
+      "rate_limit_429",
+      "failover_skips_viable_fallback"
+    ],
+    "summary": "Agentgateway currently requires Retry-After or x-ratelimit-reset headers to trigger 429-based failover. Vertex AI returns HTTP 429 with no retry/reset headers but does provide semantic body signal (`status: RESOURCE_EXHAUSTED`, `message: Resource exhausted. Please try again later.`). Because headerless 429s are not classified from body semantics, failover to lower-priority groups does not trigger, leaving requests pinned to exhausted backends and increasing the chance of avoidable client-visible 429s.",
+    "signals": [
+      "HTTP 429 from Vertex AI with no Retry-After header",
+      "HTTP 429 from Vertex AI with no x-ratelimit-reset header",
+      "Body contains status: RESOURCE_EXHAUSTED",
+      "Body contains message: Resource exhausted. Please try again later.",
+      "Failover documentation requires 429 plus proper rate-limit headers to trigger failover",
+      "Collaborator workaround suggests brief backend eviction on any 429 rather than body-aware classification"
+    ]
+  },
+  "constraints": [
+    "Header-absent 429 responses must still be classifiable when the response body carries semantic exhaustion signal.",
+    "Failover must not depend exclusively on Retry-After or reset headers when providers omit them.",
+    "Classification input should include response body semantics when headers are absent or incomplete.",
+    "Retry or eviction workarounds are not substitutes for correct failover classification.",
+    "When alternate providers or regions exist, exhausted backends should not remain the active routing target solely because retry headers are missing."
+  ],
+  "knobs": [
+    "429 failover trigger condition",
+    "body-semantic classification for headerless 429s",
+    "backend eviction duration on 429",
+    "consecutiveFailures threshold for temporary eviction",
+    "provider-specific 429 mapping"
+  ],
+  "verification": [
+    "Configure a priority group with multiple Vertex AI backends and a lower-priority fallback group.",
+    "Trigger a Vertex AI HTTP 429 with body status RESOURCE_EXHAUSTED and no Retry-After or x-ratelimit-reset headers.",
+    "Verify current behavior does not fail over to the lower-priority group.",
+    "Add body-aware 429 classification or opt-in headerless failover support.",
+    "Verify exhausted Vertex AI backends are routed away from when semantic body signal indicates failover-worthy exhaustion.",
+    "Verify transient headerless 429s can still take a short-eviction / retry path when body semantics indicate temporary pressure rather than sustained exhaustion."
+  ],
+  "notes": "This receipt captures a classification blind spot at the failover boundary: semantic 429 handling is currently gated on retry/reset headers that some providers do not emit. In this case, Vertex AI provides the only usable classification signal in the response body. The collaborator-proposed workaround (`unhealthyCondition: response.code == 429` with 10-second eviction) may improve availability operationally, but it is still a retry / eviction workaround rather than a classification fix. The economic consequence is directional but not yet numerically bounded: healthy alternates may be skipped, client-visible 429s may increase, and retries or short evictions may waste time while traffic remains concentrated on exhausted backends.",
+  "tags": [
+    "429",
+    "headerless-429",
+    "failover",
+    "vertex-ai",
+    "resource-exhausted",
+    "body-classification",
+    "routing",
+    "fallback"
+  ],
+  "mitigation_signature": {
+    "hazards": [
+      "rate_limit_429",
+      "failover_skips_viable_fallback"
+    ],
+    "constraints": [
+      "headerless 429s must be classifiable from body semantics when headers are absent",
+      "failover cannot depend exclusively on Retry-After or reset headers",
+      "eviction workaround is not equivalent to classification"
+    ],
+    "knobs": [
+      "429 failover trigger",
+      "body semantic classifier",
+      "provider-specific 429 mapping"
+    ],
+    "anti_patterns": [
+      "treating missing retry headers as missing failover signal",
+      "requiring Retry-After to trigger all 429 failover behavior",
+      "using temporary eviction as a substitute for semantic classification"
+    ]
+  },
+  "routing_impact": {
+    "default_action": "cooldown_and_route_away",
+    "cooldown_source": "none",
+    "cooldown_scope_key": "provider:region:resource_exhausted",
+    "during_cooldown": {
+      "make_http_call": false,
+      "eligible_for_routing": true,
+      "emit_decision_event": true
+    },
+    "after_cooldown": {
+      "probe_strategy": "single_flight",
+      "max_probe_qps": 0.1
+    }
+  }
+}
