@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-04-09T16:10:50Z",
+  "updated_at": "2026-04-10T05:14:09Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -559,6 +559,27 @@
         "backend eviction duration on 429"
       ],
       "path": "receipts/2026/04/PT-2026-04-09-github-agentgateway-1500-headerless-429-body-failover-gap/receipt.json"
+    },
+    {
+      "id": "PT-2026-04-10-github-opencode-18242-terminal-429-retry-loop",
+      "date": "2026-04-10",
+      "hazard_class": [
+        "rate_limit_429",
+        "retry_budget_exhausted"
+      ],
+      "source_url": "https://github.com/opencode-ai/opencode/issues/18242",
+      "repo": "opencode-ai/opencode",
+      "signals": [
+        "\"Extra usage is required for long context requests\"",
+        "retry-after: 3387",
+        "attempt #14"
+      ],
+      "knobs": [
+        "retry-after cap",
+        "terminal-error classifier",
+        "max_elapsed_ms"
+      ],
+      "path": "receipts/2026/04/PT-2026-04-10-github-opencode-18242-terminal-429-retry-loop/receipt.json"
     }
   ]
 }
