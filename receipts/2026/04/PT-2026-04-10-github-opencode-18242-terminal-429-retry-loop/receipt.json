@@ -1,0 +1,90 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-04-10-github-opencode-18242-terminal-429-retry-loop",
+  "created_at": "2026-04-10T00:00:00Z",
+  "source": {
+    "url": "https://github.com/opencode-ai/opencode/issues/18242",
+    "kind": "github_issue",
+    "repo": "opencode-ai/opencode",
+    "issue_or_pr": 18242
+  },
+  "hazard": {
+    "class": [
+      "rate_limit_429",
+      "retry_budget_exhausted"
+    ],
+    "summary": "A rejected Anthropic OAuth request was treated as indefinitely retryable, and an unbounded retry-after value caused a stalled execution loop with ~56 minute delays between attempts.",
+    "signals": [
+      "\"Extra usage is required for long context requests\"",
+      "retry-after: 3387",
+      "attempt #14",
+      "infinite retry loop",
+      "context-1m-2025-08-07 header rejected in OAuth flow",
+      "request rejected regardless of actual context size"
+    ]
+  },
+  "constraints": [
+    "Retryability must be classified before honoring retry-after.",
+    "Large retry-after values must not automatically imply WAIT within the current execution.",
+    "Known terminal or invalid-request error strings must bypass generic retry handlers.",
+    "Execution loops must enforce max attempts or max elapsed time."
+  ],
+  "knobs": [
+    "retry-after cap",
+    "terminal-error classifier",
+    "max_attempts",
+    "max_elapsed_ms",
+    "provider-specific header policy"
+  ],
+  "verification": [
+    "Remove the deprecated context-1m-2025-08-07 header from OAuth requests.",
+    "Verify the same request succeeds without entering retry.",
+    "Verify large retry-after values do not produce indefinite execution loops.",
+    "Verify terminal request-rejection errors are surfaced immediately instead of retried."
+  ],
+  "notes": "This receipt captures two stacked failures: (1) upstream request rejection caused by a deprecated Anthropic beta header in an OAuth flow, and (2) execution-layer misclassification that treated the rejection as retryable and fully honored a 3387 second retry-after. The reusable pattern is the second layer: a terminal condition treated as retryable, combined with unbounded retry-after handling, creates a stalled execution loop. Correct runtime behavior is to fail fast and surface the reason clearly to the caller rather than retry silently.",
+  "tags": [
+    "429",
+    "retry-loop",
+    "oauth",
+    "anthropic",
+    "long-context",
+    "terminal-classification",
+    "retry-after"
+  ],
+  "mitigation_signature": {
+    "hazards": [
+      "rate_limit_429",
+      "retry_budget_exhausted"
+    ],
+    "constraints": [
+      "classify terminal conditions before retry",
+      "cap retry-after within a single execution",
+      "enforce max attempts or max elapsed"
+    ],
+    "knobs": [
+      "retry-after cap",
+      "terminal classifier",
+      "max_elapsed_ms"
+    ],
+    "anti_patterns": [
+      "indefinite retry of rejected requests",
+      "fully honoring large retry-after values without reclassification",
+      "stalled execution presented as active progress"
+    ]
+  },
+    "routing_impact": {
+    "default_action": "fail_fast",
+    "cooldown_source": "retry_after_header",
+    "cooldown_scope_key": "request_class:terminal_rejection",
+    "during_cooldown": {
+        "make_http_call": false,
+        "eligible_for_routing": false,
+        "emit_decision_event": true
+    },
+    "after_cooldown": {
+        "probe_strategy": "single_flight",
+        "max_probe_qps": 0.1
+    }
+  }
+}
