@@ -1,0 +1,90 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-04-10-github-opencode-21960-retry-budget-boundary-missing",
+  "created_at": "2026-04-10T00:00:00Z",
+  "source": {
+    "url": "https://github.com/anomalyco/opencode/issues/21960",
+    "kind": "github_issue",
+    "repo": "anomalyco/opencode",
+    "issue_or_pr": 21960
+  },
+  "hazard": {
+    "class": [
+      "rate_limit_429",
+      "retry_budget_exhausted"
+    ],
+    "summary": "Retryable errors enter a schedule with no maximum attempt count and no maximum total retry duration. The runtime stays in retry state indefinitely, never emitting a terminal error, and downstream consumers remain blocked waiting for completion.",
+    "signals": [
+      "SessionRetry.policy() retries forever with no max attempt count",
+      "429, 529, overloaded treated as retryable indefinitely",
+      "session.status remains 'retry'",
+      "session.error and session.idle are never emitted",
+      "tasks appear 'running' for 30-45 minutes until stale timeout",
+      "1,691 failed API calls in a single day with zero tokens generated",
+      "retry-after-ms up to 2147483647ms (~24.8 days) per attempt"
+    ]
+  },
+  "constraints": [
+    "Retryable classification must still be bounded by max attempts or max elapsed time.",
+    "Retry schedules must eventually terminate and emit a terminal error when recovery does not occur.",
+    "Retry-after values must not create unbounded execution windows without an outer retry budget.",
+    "Downstream lifecycle consumers must receive a terminal session signal when retry budget is exhausted."
+  ],
+  "knobs": [
+    "max_retries",
+    "max_elapsed_ms",
+    "retry-after cap",
+    "retryable error classifier",
+    "session terminal event emission"
+  ],
+  "verification": [
+    "Configure a persistent retryable error (for example unavailable model or sustained 429).",
+    "Verify retries stop after max_retries or max_elapsed_ms is reached.",
+    "Verify session.error or equivalent terminal signal is emitted when retry budget is exhausted.",
+    "Verify downstream consumers do not remain blocked waiting for an indefinitely retrying session."
+  ],
+  "notes": "This receipt captures a deeper execution contract failure than ordinary retry misclassification. The issue is not only that errors are retried, but that retryability has no terminal boundary. Once an error enters the retryable branch, the runtime remains in retry state indefinitely unless some external stale timeout interrupts it. The reusable lesson is that retryability must always be budgeted.",
+  "tags": [
+    "429",
+    "retry-loop",
+    "retry-budget",
+    "false-liveness",
+    "session-lifecycle",
+    "opencode"
+  ],
+  "mitigation_signature": {
+    "hazards": [
+      "rate_limit_429",
+      "retry_budget_exhausted"
+    ],
+    "constraints": [
+      "bound retryable branches with max attempts or max elapsed",
+      "emit terminal error when retry budget is exhausted",
+      "cap long retry-after values within a single execution"
+    ],
+    "knobs": [
+      "max_retries",
+      "max_elapsed_ms",
+      "retry-after cap"
+    ],
+    "anti_patterns": [
+      "retryable branch with no terminal boundary",
+      "session appears active while making no progress",
+      "downstream consumers blocked on missing terminal signal"
+    ]
+  },
+  "routing_impact": {
+    "default_action": "retry_with_budget",
+    "cooldown_source": "retry_after_header",
+    "cooldown_scope_key": "error_class:retryable_with_budget",
+    "during_cooldown": {
+      "make_http_call": false,
+      "eligible_for_routing": false,
+      "emit_decision_event": true
+    },
+    "after_cooldown": {
+      "probe_strategy": "single_flight",
+      "max_probe_qps": 0.1
+    }
+  }
+}
