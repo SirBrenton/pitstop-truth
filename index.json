@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-04-10T05:14:09Z",
+  "updated_at": "2026-04-11T02:46:08Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -580,6 +580,27 @@
         "max_elapsed_ms"
       ],
       "path": "receipts/2026/04/PT-2026-04-10-github-opencode-18242-terminal-429-retry-loop/receipt.json"
+    },
+    {
+      "id": "PT-2026-04-10-github-opencode-21960-retry-budget-boundary-missing",
+      "date": "2026-04-10",
+      "hazard_class": [
+        "rate_limit_429",
+        "retry_budget_exhausted"
+      ],
+      "source_url": "https://github.com/anomalyco/opencode/issues/21960",
+      "repo": "anomalyco/opencode",
+      "signals": [
+        "SessionRetry.policy() retries forever with no max attempt count",
+        "session.status remains 'retry'",
+        "1,691 failed API calls with zero tokens generated"
+      ],
+      "knobs": [
+        "max_retries",
+        "max_elapsed_ms",
+        "retry-after cap"
+      ],
+      "path": "receipts/2026/04/PT-2026-04-10-github-opencode-21960-retry-budget-boundary-missing/receipt.json"
     }
   ]
 }
