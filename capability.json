@@ -1,12 +1,12 @@
 {
     "schema": "pitstop-capability.v0",
     "name": "pitstop-truth",
-    "version": "0.1.14",
+    "version": "0.1.15",
     "description": "Machine-readable corpus of AI/API execution failure patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, and concurrency amplification \u2014 classified, verified, and cross-referenced across production systems.",
     "capability": "execution_failure_classification",
     "thesis": "When AI pipelines hit rate limits and timeouts, they often respond incorrectly \u2014 amplifying pressure instead of absorbing it. This corpus documents how, where, and why.",
     "corpus": {
-        "receipts": 30,
+        "receipts": 31,
         "hazard_classes": [
             "rate_limit_429",
             "timeout_deadline",
@@ -256,6 +256,18 @@
             "canonical_receipt": "PT-2026-04-10-github-opencode-21960-retry-budget-boundary-missing",
             "fix": "Introduce retry budget constraints (max_retries or max_elapsed_ms). Ensure retry schedules terminate and emit a terminal error when recovery does not occur. Cap long retry-after values within a single execution window.",
             "note": "This pattern captures a deeper execution failure than standard retry misclassification. The issue is not whether to retry, but that retryability has no boundary. Without a retry budget, systems defer failure indefinitely while appearing active \u2014 creating false liveness and unbounded resource consumption."
+        },
+        {
+            "id": "protocol-ack-coupled-to-throttled-execution",
+            "hazard": "retry_budget_exhausted",
+            "summary": "A provider-side 429 stalls synchronous webhook processing long enough to violate the upstream ACK deadline. The upstream source interprets the missing ACK as delivery failure and redelivers the same message, turning one throttling event into duplicate workload amplification.",
+            "classification": "Protocol ACK coupled to WAIT/slow fallback path",
+            "confirmed_in": [
+                "openclaw/openclaw"
+            ],
+            "canonical_receipt": "PT-2026-04-10-github-openclaw-57403-webhook-ack-duplicate-redelivery",
+            "fix": "Preserve the upstream protocol boundary first: ACK immediately or decouple model execution from webhook delivery. Dedupe redeliveries by delivery identifier, and ensure fallback timing cannot exceed the protocol timeout budget.",
+            "note": "This pattern is stronger than a simple 429 or fallback bug. The reusable lesson is that throttled model execution can escape the model layer and become a protocol-level duplicate delivery loop when ACK semantics are coupled to synchronous AI latency."
         }
     ],
     "detection": {
@@ -281,5 +293,5 @@
     },
     "contact": "brentondwilliams@gmail.com",
     "license": "Apache-2.0",
-    "last_updated": "2026-04-10"
+    "last_updated": "2026-04-13"
 }
