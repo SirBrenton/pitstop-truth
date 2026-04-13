@@ -1,0 +1,90 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-04-10-github-openclaw-57403-webhook-ack-duplicate-redelivery",
+  "created_at": "2026-04-10T00:00:00Z",
+  "source": {
+    "url": "https://github.com/openclaw/openclaw/issues/57403",
+    "kind": "github_issue",
+    "repo": "openclaw/openclaw",
+    "issue_or_pr": 57403
+  },
+  "hazard": {
+    "class": [
+      "rate_limit_429",
+      "retry_budget_exhausted"
+    ],
+    "summary": "A provider-side 429 stalls synchronous webhook processing long enough to violate the upstream ACK deadline. The webhook source interprets the missing ACK as delivery failure and redelivers the same message, turning one rate-limit event into duplicate workload amplification.",
+    "signals": [
+      "429 rate_limit_error from Anthropic",
+      "Telegram Webhook timeout waiting for ACK",
+      "same user message delivered and processed multiple times",
+      "fallback model configured but did not prevent timeout",
+      "duplicate responses or duplicate processing",
+      "missing ACK interpreted as delivery failure"
+    ]
+  },
+  "constraints": [
+    "Webhook ACK must not be coupled to model completion latency when provider stalls can exceed upstream timeout windows.",
+    "Redelivery-capable upstream protocols must be acknowledged or decoupled before long-running model execution begins.",
+    "Duplicate message deliveries must be deduplicated by upstream delivery identifier or equivalent idempotency key.",
+    "Fallback behavior must preserve the protocol timeout boundary, not only the model routing boundary."
+  ],
+  "knobs": [
+    "webhook_ack_mode",
+    "async_processing",
+    "dedupe_window",
+    "fallback_timeout_budget",
+    "idempotency_key"
+  ],
+  "verification": [
+    "Trigger a provider-side 429 while processing a Telegram webhook message.",
+    "Verify the webhook receives ACK before its timeout boundary even when the model path stalls or falls back.",
+    "Verify duplicate re-deliveries do not result in duplicate message processing or duplicate user responses.",
+    "Verify fallback timing cannot hold the webhook request open past the upstream protocol timeout."
+  ],
+  "notes": "This receipt is stronger than a simple 429 fallback bug. The reusable lesson is that a provider-side throttle can escape the model layer and become a protocol-level duplicate delivery loop if ACK semantics are tied to synchronous AI execution. The architectural guardrail is to preserve the webhook contract first, then handle fallback, retry, or rate-limit behavior behind that boundary.",
+  "tags": [
+    "429",
+    "webhook",
+    "telegram",
+    "duplicate-delivery",
+    "false-liveness",
+    "fallback",
+    "openclaw"
+  ],
+  "mitigation_signature": {
+    "hazards": [
+      "rate_limit_429",
+      "retry_budget_exhausted"
+    ],
+    "constraints": [
+      "decouple webhook ACK from model latency",
+      "dedupe redeliveries",
+      "bound fallback inside protocol timeout budget"
+    ],
+    "knobs": [
+      "webhook_ack_mode",
+      "async_processing",
+      "dedupe_window"
+    ],
+    "anti_patterns": [
+      "synchronous webhook ACK held hostage by throttled model call",
+      "provider-side 429 causing upstream duplicate delivery",
+      "fallback too slow to preserve protocol contract"
+    ]
+  },
+  "routing_impact": {
+    "default_action": "fail_fast",
+    "cooldown_source": "server_hint",
+    "cooldown_scope_key": "protocol_boundary:webhook_ack",
+    "during_cooldown": {
+      "make_http_call": false,
+      "eligible_for_routing": false,
+      "emit_decision_event": true
+    },
+    "after_cooldown": {
+      "probe_strategy": "single_flight",
+      "max_probe_qps": 0.1
+    }
+  }
+}

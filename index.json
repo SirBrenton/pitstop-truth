@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-04-11T02:46:08Z",
+  "updated_at": "2026-04-13T17:55:57Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -601,6 +601,27 @@
         "retry-after cap"
       ],
       "path": "receipts/2026/04/PT-2026-04-10-github-opencode-21960-retry-budget-boundary-missing/receipt.json"
+    },
+    {
+      "id": "PT-2026-04-10-github-openclaw-57403-webhook-ack-duplicate-redelivery",
+      "date": "2026-04-10",
+      "hazard_class": [
+        "rate_limit_429",
+        "retry_budget_exhausted"
+      ],
+      "source_url": "https://github.com/openclaw/openclaw/issues/57403",
+      "repo": "openclaw/openclaw",
+      "signals": [
+        "Telegram Webhook timeout waiting for ACK",
+        "same user message delivered and processed multiple times",
+        "fallback model configured but did not prevent timeout"
+      ],
+      "knobs": [
+        "webhook_ack_mode",
+        "async_processing",
+        "dedupe_window"
+      ],
+      "path": "receipts/2026/04/PT-2026-04-10-github-openclaw-57403-webhook-ack-duplicate-redelivery/receipt.json"
     }
   ]
 }
