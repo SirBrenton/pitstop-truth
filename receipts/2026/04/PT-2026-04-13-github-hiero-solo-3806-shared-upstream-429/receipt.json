@@ -1,0 +1,88 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-04-13-github-hiero-solo-3806-shared-upstream-429",
+  "created_at": "2026-04-13T00:00:00Z",
+  "source": {
+    "url": "https://github.com/hiero-ledger/solo/issues/3806",
+    "kind": "github_issue",
+    "repo": "hiero-ledger/solo",
+    "issue_or_pr": 3806
+  },
+  "hazard": {
+    "class": [
+      "rate_limit_429"
+    ],
+    "summary": "Unauthenticated or uncached fetches against a shared upstream resource in CI hit provider-side rate limits and fail deterministically under concurrency. Retry alone is insufficient because all workers draw from the same shared capacity pool.",
+    "signals": [
+      "Failed to download CRD YAML: 429 Too Many Requests",
+      "Pod Logs CRDs [FAILED]",
+      "Prometheus Operator CRDs [FAILED]",
+      "solo consensus network deploy [FAILED]",
+      "multiple CI incidents reproduced",
+      "fixes included retry, authenticated GitHub fetch, Contents API, and cache path changes"
+    ]
+  },
+  "constraints": [
+    "Shared upstream fetches in CI must use identity or authenticated access when rate limits are enforced per client or pool.",
+    "Frequently reused external artifacts must be cached rather than fetched repeatedly in every workflow run.",
+    "Retry alone must not be the primary mitigation when all callers share the same upstream capacity boundary.",
+    "External dependency download paths should use rate-limit-aware APIs and stable versioned cache locations."
+  ],
+  "knobs": [
+    "authenticated_fetch",
+    "artifact_cache",
+    "cache_path_versioning",
+    "contents_api",
+    "retry_policy"
+  ],
+  "verification": [
+    "Run the same CI workflow under repeated or concurrent load using authenticated upstream fetches.",
+    "Verify CRD downloads are served from cache when artifacts already exist.",
+    "Verify the workflow no longer fails with 429 Too Many Requests during repeated runs.",
+    "Verify the selected GitHub API path and authentication mode remain within rate-limit budget under CI concurrency."
+  ],
+  "notes": "This is a lower-order but highly reusable reliability pattern. The important lesson is not merely 'retry on 429', but that shared external dependencies become capacity bottlenecks when they are fetched without identity, caching, or rate-limit-aware API usage. The confirmed fixes in the issue — authentication, Contents API usage, and versioned caching — show that retry by itself was not enough.",
+  "tags": [
+    "429",
+    "ci",
+    "github",
+    "cache",
+    "shared-upstream",
+    "capacity",
+    "hiero-solo"
+  ],
+  "mitigation_signature": {
+    "hazards": [
+      "rate_limit_429"
+    ],
+    "constraints": [
+      "authenticate shared upstream access",
+      "cache reusable artifacts",
+      "do not rely on retry alone for pooled upstream limits"
+    ],
+    "knobs": [
+      "authenticated_fetch",
+      "artifact_cache",
+      "contents_api"
+    ],
+    "anti_patterns": [
+      "unauthenticated shared upstream fetch in CI",
+      "repeated artifact downloads without cache",
+      "retry used as the only mitigation for pooled rate limits"
+    ]
+  },
+  "routing_impact": {
+    "default_action": "retry_with_budget",
+    "cooldown_source": "server_hint",
+    "cooldown_scope_key": "dependency:shared_upstream_fetch",
+    "during_cooldown": {
+      "make_http_call": false,
+      "eligible_for_routing": false,
+      "emit_decision_event": true
+    },
+    "after_cooldown": {
+      "probe_strategy": "single_flight",
+      "max_probe_qps": 0.1
+    }
+  }
+}

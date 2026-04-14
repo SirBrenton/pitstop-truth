@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-04-13T17:55:57Z",
+  "updated_at": "2026-04-14T03:45:35Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -622,6 +622,25 @@
         "dedupe_window"
       ],
       "path": "receipts/2026/04/PT-2026-04-10-github-openclaw-57403-webhook-ack-duplicate-redelivery/receipt.json"
+    },
+    {
+      "id": "PT-2026-04-13-github-hiero-solo-3806-shared-upstream-429",
+      "date": "2026-04-13",
+      "hazard_class": [
+        "rate_limit_429"
+      ],
+      "source_url": "https://github.com/hiero-ledger/solo/issues/3806",
+      "repo": "hiero-ledger/solo",
+      "signals": [
+        "Failed to download CRD YAML: 429 Too Many Requests",
+        "fixes included authenticated GitHub fetch, Contents API, and cache path changes"
+      ],
+      "knobs": [
+        "authenticated_fetch",
+        "artifact_cache",
+        "contents_api"
+      ],
+      "path": "receipts/2026/04/PT-2026-04-13-github-hiero-solo-3806-shared-upstream-429/receipt.json"
     }
   ]
 }
