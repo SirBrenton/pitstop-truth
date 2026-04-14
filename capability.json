@@ -268,6 +268,18 @@
             "canonical_receipt": "PT-2026-04-10-github-openclaw-57403-webhook-ack-duplicate-redelivery",
             "fix": "Preserve the upstream protocol boundary first: ACK immediately or decouple model execution from webhook delivery. Dedupe redeliveries by delivery identifier, and ensure fallback timing cannot exceed the protocol timeout budget.",
             "note": "This pattern is stronger than a simple 429 or fallback bug. The reusable lesson is that throttled model execution can escape the model layer and become a protocol-level duplicate delivery loop when ACK semantics are coupled to synchronous AI latency."
+        },
+        {
+            "id": "shared-upstream-fetch-without-auth-or-cache",
+            "hazard": "rate_limit_429",
+            "summary": "Unauthenticated or uncached requests to a shared upstream resource in CI can fail deterministically with 429 under concurrency. Retry alone does not resolve the problem because all workers draw from the same upstream capacity pool.",
+            "classification": "CAP — shared upstream capacity exhausted without identity or caching",
+            "confirmed_in": [
+                "hiero-ledger/solo"
+            ],
+            "canonical_receipt": "PT-2026-04-13-github-hiero-solo-3806-shared-upstream-429",
+            "fix": "Authenticate upstream fetches, use rate-limit-aware APIs, and cache reusable artifacts instead of downloading them repeatedly. Do not rely on retry alone for pooled upstream limits.",
+            "note": "This is a lower-order but highly reusable CI reliability pattern. The important lesson is not just to retry on 429, but to introduce identity isolation and caching when external dependency fetches become shared capacity bottlenecks."
         }
     ],
     "detection": {
