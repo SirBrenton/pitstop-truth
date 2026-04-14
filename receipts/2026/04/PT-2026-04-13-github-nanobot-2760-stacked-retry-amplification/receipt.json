@@ -1,0 +1,92 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-04-13-github-nanobot-2760-stacked-retry-amplification",
+  "created_at": "2026-04-13T00:00:00Z",
+  "source": {
+    "url": "https://github.com/HKUDS/nanobot/issues/2760",
+    "kind": "github_issue",
+    "repo": "HKUDS/nanobot",
+    "issue_or_pr": 2760
+  },
+  "hazard": {
+    "class": [
+      "rate_limit_429",
+      "retry_budget_exhausted"
+    ],
+    "summary": "Application-layer retries and provider SDK retries were both active, so each app attempt fanned out into multiple upstream attempts. Under persistent 429 conditions this multiplied request volume, cost, and latency without improving recovery.",
+    "signals": [
+      "retry amplification risk: stacked app+SDK retries can triple upstream load",
+      "mock endpoint always returns HTTP 429",
+      "expected app-layer attempts: 4",
+      "observed before fix: 12 upstream requests with SDK default vs 4 with SDK retries disabled",
+      "OpenAI compat: 3.0x amplification",
+      "Anthropic: 3.0x amplification",
+      "PR-A merged: disable SDK auto-retries to stop amplification",
+      "PR-B scoped to 429 semantic classification"
+    ]
+  },
+  "constraints": [
+    "A single request path must have one clear retry owner.",
+    "Layered retries must not multiply upstream attempts under persistent failure conditions.",
+    "Retry de-duplication and 429 semantic classification are separate concerns and must be handled independently.",
+    "Centralizing retry ownership does not eliminate the need to distinguish transient pressure from quota or billing exhaustion."
+  ],
+  "knobs": [
+    "sdk_max_retries",
+    "app_retry_policy",
+    "retry_owner",
+    "retry_after_threshold",
+    "body_semantic_classifier"
+  ],
+  "verification": [
+    "Reproduce persistent 429 responses with app-layer retries enabled and SDK auto-retries enabled.",
+    "Verify upstream attempts exceed expected app attempts when both retry layers are active.",
+    "Disable SDK auto-retries and verify upstream request count collapses to the app-layer attempt count.",
+    "Verify 429 handling still distinguishes WAIT vs STOP after retry ownership is centralized."
+  ],
+  "notes": "This receipt captures two linked truths. First, retry ownership must be singular: stacked app and SDK retries measurably amplified upstream pressure from 4 expected attempts to 12 observed attempts. Second, removing retry amplification does not solve semantic 429 classification. Even with one retry owner, the system still needs to distinguish WAIT (transient pressure) from STOP (quota or billing exhaustion).",
+  "tags": [
+    "429",
+    "retry-amplification",
+    "sdk",
+    "app-layer",
+    "nanobot",
+    "retry-budget",
+    "ownership"
+  ],
+  "mitigation_signature": {
+    "hazards": [
+      "rate_limit_429",
+      "retry_budget_exhausted"
+    ],
+    "constraints": [
+      "assign a single retry owner per request path",
+      "prevent multiplicative retry fan-out",
+      "preserve semantic 429 classification after de-duplication"
+    ],
+    "knobs": [
+      "sdk_max_retries",
+      "retry_owner",
+      "body_semantic_classifier"
+    ],
+    "anti_patterns": [
+      "stacked SDK + app retries on the same failure",
+      "retry amplification under persistent 429",
+      "assuming retry centralization solves classification"
+    ]
+  },
+  "routing_impact": {
+    "default_action": "retry_with_budget",
+    "cooldown_source": "retry_after_header",
+    "cooldown_scope_key": "request_path:single_retry_owner",
+    "during_cooldown": {
+      "make_http_call": false,
+      "eligible_for_routing": false,
+      "emit_decision_event": true
+    },
+    "after_cooldown": {
+      "probe_strategy": "single_flight",
+      "max_probe_qps": 0.1
+    }
+  }
+}

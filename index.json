@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-04-14T03:45:35Z",
+  "updated_at": "2026-04-14T04:14:10Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -641,6 +641,27 @@
         "contents_api"
       ],
       "path": "receipts/2026/04/PT-2026-04-13-github-hiero-solo-3806-shared-upstream-429/receipt.json"
+    },
+    {
+      "id": "PT-2026-04-13-github-nanobot-2760-stacked-retry-amplification",
+      "date": "2026-04-13",
+      "hazard_class": [
+        "rate_limit_429",
+        "retry_budget_exhausted"
+      ],
+      "source_url": "https://github.com/HKUDS/nanobot/issues/2760",
+      "repo": "HKUDS/nanobot",
+      "signals": [
+        "expected app-layer attempts: 4",
+        "observed before fix: 12 upstream requests with SDK default vs 4 with SDK retries disabled",
+        "3.0x amplification"
+      ],
+      "knobs": [
+        "sdk_max_retries",
+        "app_retry_policy",
+        "retry_owner"
+      ],
+      "path": "receipts/2026/04/PT-2026-04-13-github-nanobot-2760-stacked-retry-amplification/receipt.json"
     }
   ]
 }
