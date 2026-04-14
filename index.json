@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-04-14T04:14:10Z",
+  "updated_at": "2026-04-14T20:55:46Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -662,6 +662,27 @@
         "retry_owner"
       ],
       "path": "receipts/2026/04/PT-2026-04-13-github-nanobot-2760-stacked-retry-amplification/receipt.json"
+    },
+    {
+      "id": "PT-2026-04-13-github-logfwd-1312-delivery-contract-convergence",
+      "date": "2026-04-13",
+      "hazard_class": [
+        "retry_budget_exhausted",
+        "timeout_deadline"
+      ],
+      "source_url": "https://github.com/logfwd/logfwd/issues/1312",
+      "repo": "logfwd/logfwd",
+      "signals": [
+        "unbounded retry creates liveness risk",
+        "IoError retries forever at 30s intervals",
+        "Rejected advances checkpoint = data loss by design"
+      ],
+      "knobs": [
+        "max_retries",
+        "delivery_outcome_bridge",
+        "checkpoint_policy"
+      ],
+      "path": "receipts/2026/04/PT-2026-04-13-github-logfwd-1312-delivery-contract-convergence/receipt.json"
     }
   ]
 }

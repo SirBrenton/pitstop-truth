@@ -1,0 +1,92 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-04-13-github-logfwd-1312-delivery-contract-convergence",
+  "created_at": "2026-04-13T00:00:00Z",
+  "source": {
+    "url": "https://github.com/logfwd/logfwd/issues/1312",
+    "kind": "github_issue",
+    "repo": "logfwd/logfwd",
+    "issue_or_pr": 1312
+  },
+  "hazard": {
+    "class": [
+      "retry_budget_exhausted",
+      "timeout_deadline"
+    ],
+    "summary": "An explicit output delivery contract audit independently surfaced the same execution-reliability problems seen in other systems: unbounded retry creates liveness risk, delivery outcomes collapse too early at the checkpoint seam, and control-flow behavior still defines correctness where contract semantics should.",
+    "signals": [
+      "unbounded retry creates liveness risk",
+      "IoError retries forever at 30s intervals",
+      "the only circuit-breaker is the 60s per-batch timeout",
+      "Rejected advances checkpoint = data loss by design",
+      "worker panic can bypass ack path",
+      "delivery outcomes collapse too early at the pipeline checkpoint seam",
+      "fanout behavior is defined and tested as a contract",
+      "retry behavior is bounded, observable, and policy-driven (desired end-state)"
+    ]
+  },
+  "constraints": [
+    "Retryable failure paths must have an explicit terminal boundary.",
+    "Delivery outcomes must remain explicit across the worker-to-checkpoint seam rather than collapsing into incidental control flow.",
+    "Checkpoint advancement rules must follow delivery contract semantics, not implementation accident.",
+    "Fanout aggregation precedence and retry behavior must be explicit, bounded, and testable."
+  ],
+  "knobs": [
+    "max_retries",
+    "retry_after_cap",
+    "delivery_outcome_bridge",
+    "checkpoint_policy",
+    "fanout_precedence"
+  ],
+  "verification": [
+    "Verify retryable sink failures terminate after a bounded retry budget instead of looping forever.",
+    "Verify worker panic paths still emit failure outcomes and do not strand tickets.",
+    "Verify rejected outcomes and retry-exhausted outcomes produce distinct checkpoint behavior.",
+    "Verify fanout aggregation semantics remain deterministic under mixed sink results."
+  ],
+  "notes": "This receipt is valuable primarily as external convergence. A team working on a log-forwarding delivery contract independently surfaced the same class of execution-reliability problems documented elsewhere: retryable branches without terminal boundaries become liveness failures, and correctness degrades when outcome semantics collapse too early. This extends the corpus beyond AI-specific systems and shows the pattern is general to execution infrastructure.",
+  "tags": [
+    "external-convergence",
+    "retry-budget",
+    "liveness",
+    "checkpoint",
+    "fanout",
+    "delivery-contract",
+    "logfwd"
+  ],
+  "mitigation_signature": {
+    "hazards": [
+      "retry_budget_exhausted",
+      "timeout_deadline"
+    ],
+    "constraints": [
+      "bound retryable paths explicitly",
+      "preserve typed outcomes across checkpoint seams",
+      "make delivery semantics contract-first"
+    ],
+    "knobs": [
+      "max_retries",
+      "delivery_outcome_bridge",
+      "checkpoint_policy"
+    ],
+    "anti_patterns": [
+      "retry forever until timeout becomes the only boundary",
+      "checkpoint progression coupled to collapsed delivery outcomes",
+      "correctness determined by incidental control flow"
+    ]
+  },
+  "routing_impact": {
+    "default_action": "retry_with_budget",
+    "cooldown_source": "server_hint",
+    "cooldown_scope_key": "delivery_contract:explicit_outcomes",
+    "during_cooldown": {
+      "make_http_call": false,
+      "eligible_for_routing": false,
+      "emit_decision_event": true
+    },
+    "after_cooldown": {
+      "probe_strategy": "single_flight",
+      "max_probe_qps": 0.1
+    }
+  }
+}
