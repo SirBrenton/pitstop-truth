@@ -1,0 +1,93 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-04-16-github-copilot-cli-2760-retry-after-timeout-conflict",
+  "created_at": "2026-04-16T00:00:00Z",
+  "source": {
+    "url": "https://github.com/github/copilot-cli/issues/2760",
+    "kind": "github_issue",
+    "repo": "github/copilot-cli",
+    "issue_or_pr": 2760
+  },
+  "hazard": {
+    "class": [
+      "rate_limit_429",
+      "retry_budget_exhausted",
+      "timeout_deadline"
+    ],
+    "summary": "The client appears to ignore or fail to honor long Retry-After windows on 429 responses, while its own HTTP timeout converts server-directed waiting into immediate retry behavior. This creates rapid retry loops, quota depletion, and false liveness under sustained rate limiting.",
+    "signals": [
+      "429 responses retried immediately without honoring Retry-After",
+      "20+ retries per minute during rate limiting",
+      "GitHub requests wait times of 5-10 minutes via Retry-After",
+      "client timeout approximately 30-60 seconds",
+      "hold durations over 60 seconds cause timeout and immediate retry",
+      "weekly quota depleted rapidly",
+      "rate limit penalties escalate from 5min to 10min to 15min+"
+    ]
+  },
+  "constraints": [
+    "Retry-After must be treated as a hard lower bound, not a hint.",
+    "Transport-layer timeouts must not override application-layer waiting intent from a 429 response.",
+    "Retryable paths must have an explicit retry budget or max elapsed boundary.",
+    "Long Retry-After windows must be surfaced as non-retryable within the current execution context when recovery cannot happen inside the run."
+  ],
+  "knobs": [
+    "retry_after_floor_ms",
+    "stop_threshold_ms",
+    "max_retries",
+    "max_elapsed_ms",
+    "http_client_timeout_ms",
+    "cooldown_mode"
+  ],
+  "verification": [
+    "Simulate a 429 response with Retry-After greater than 5 minutes and verify the client does not immediately retry inside the same run.",
+    "Verify transport timeouts longer than 30-60 seconds do not reclassify server-directed waiting as connection failure.",
+    "Verify retries stop after an explicit retry budget or max elapsed boundary.",
+    "Verify user-facing state surfaces cooldown or quota exhaustion instead of looping silently."
+  ],
+  "notes": "This receipt adds a strong cross-layer pattern to the corpus: application-layer wait signals can be nullified by transport-layer timeout behavior, turning explicit server guidance into uncontrolled retry loops. The important lesson is not merely 'add backoff' but 'preserve server intent across layers and distinguish WAIT from STOP.'",
+  "tags": [
+    "429",
+    "retry-after",
+    "timeout-conflict",
+    "false-liveness",
+    "copilot-cli",
+    "cross-layer"
+  ],
+  "mitigation_signature": {
+    "hazards": [
+      "rate_limit_429",
+      "retry_budget_exhausted",
+      "timeout_deadline"
+    ],
+    "constraints": [
+      "preserve Retry-After semantics across layers",
+      "bound retries explicitly",
+      "surface long cooldown windows instead of looping"
+    ],
+    "knobs": [
+      "stop_threshold_ms",
+      "max_elapsed_ms",
+      "http_client_timeout_ms"
+    ],
+    "anti_patterns": [
+      "ignoring Retry-After header",
+      "transport timeout reclassifies wait as failure",
+      "immediate retry under guaranteed non-recovery"
+    ]
+  },
+  "routing_impact": {
+    "default_action": "retry_with_budget",
+    "cooldown_source": "retry_after_header",
+    "cooldown_scope_key": "provider:github_copilot",
+    "during_cooldown": {
+      "make_http_call": false,
+      "eligible_for_routing": false,
+      "emit_decision_event": true
+    },
+    "after_cooldown": {
+      "probe_strategy": "single_flight",
+      "max_probe_qps": 0.1
+    }
+  }
+}
