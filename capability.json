@@ -1,12 +1,12 @@
 {
     "schema": "pitstop-capability.v0",
     "name": "pitstop-truth",
-    "version": "0.1.17",
+    "version": "0.1.18",
     "description": "Machine-readable corpus of AI/API execution failure patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, and concurrency amplification \u2014 classified, verified, and cross-referenced across production systems.",
     "capability": "execution_failure_classification",
     "thesis": "When AI pipelines hit rate limits and timeouts, they often respond incorrectly \u2014 amplifying pressure instead of absorbing it. This corpus documents how, where, and why.",
     "corpus": {
-        "receipts": 33,
+        "receipts": 35,
         "hazard_classes": [
             "rate_limit_429",
             "timeout_deadline",
@@ -33,7 +33,7 @@
         ],
         "date_range": {
             "earliest": "2025-07-15",
-            "latest": "2026-04-13"
+            "latest": "2026-04-16"
         }
     },
     "query": {
@@ -294,6 +294,17 @@
             "canonical_receipt": "PT-2026-04-13-github-nanobot-2760-stacked-retry-amplification",
             "fix": "Assign a single retry owner per request path. Disable duplicate retry loops at lower layers, then handle 429 semantics explicitly in the remaining retry owner so WAIT and STOP are not collapsed together.",
             "note": "This pattern proves that retry ownership and 429 classification are separate concerns. PR-A removed multiplicative retry fan-out by centralizing retries. PR-B remained necessary because de-duplication alone does not distinguish transient pressure from quota or billing exhaustion."
+        },
+        {
+            "id": "retry-after-timeout-conflict",
+            "hazard": "rate_limit_429",
+            "summary": "Server-directed Retry-After wait is overridden by client transport timeout, causing immediate retries and retry amplification under sustained rate limiting.",
+            "classification": "WAIT signal nullified by transport layer",
+            "confirmed_in": [
+                "github/copilot-cli"
+            ],
+            "canonical_receipt": "PT-2026-04-16-github-copilot-cli-2760-retry-after-timeout-conflict",
+            "fix": "Treat Retry-After as a hard lower bound and ensure transport timeouts do not reclassify waiting as failure. Align retry budgets with execution window."
         }
     ],
     "detection": {
