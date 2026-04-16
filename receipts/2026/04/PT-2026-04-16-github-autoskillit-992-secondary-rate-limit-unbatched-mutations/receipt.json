@@ -1,0 +1,89 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-04-16-github-autoskillit-992-secondary-rate-limit-unbatched-mutations",
+  "created_at": "2026-04-16T00:00:00Z",
+  "source": {
+    "url": "https://github.com/TalonT-Org/AutoSkillit/issues/992",
+    "kind": "github_issue",
+    "repo": "TalonT-Org/AutoSkillit",
+    "issue_or_pr": 992
+  },
+  "hazard": {
+    "class": [
+      "rate_limit_429",
+      "retry_budget_exhausted"
+    ],
+    "summary": "Secondary rate limits triggered not by raw request volume but by execution shape: unbatched per-entity mutations, repeated reads, and bursty write patterns across multiple skills.",
+    "signals": [
+      "secondary rate limits hit during PR review workflows",
+      "per-comment POST fallback consumes 5 points per mutation",
+      "thread replies and resolutions executed individually",
+      "GitHub requires 1s spacing between mutating requests",
+      "requests should be serialized, not concurrent",
+      "retry resilience added previously did not resolve issue",
+      "batch endpoints reduce many writes to a single request"
+    ]
+  },
+  "constraints": [
+    "Mutating operations must be batched wherever the API supports aggregation.",
+    "Per-entity mutation loops must not emit rapid bursts under shared API budgets.",
+    "Retry resilience must not be used as a substitute for reducing avoidable API pressure.",
+    "Shared API budgets must be treated as a global execution constraint, not per-skill."
+  ],
+  "knobs": [
+    "batch_inline_comments",
+    "batch_graphql_mutations",
+    "mutate_delay_seconds",
+    "prefetch_entity_lists",
+    "conditional_request_polling"
+  ],
+  "verification": [
+    "Verify inline review comments are sent via a single batch request.",
+    "Verify thread resolutions are batched via GraphQL aliases.",
+    "Verify mutating calls are spaced by at least 1 second and not concurrent.",
+    "Verify total mutation points per run drop materially after batching."
+  ],
+  "notes": "Key insight: rate limits are often self-inflicted by execution shape. Systems can respect retry/backoff and still fail if they generate unnecessary mutation density under shared budgets.",
+  "tags": [
+    "github",
+    "secondary-rate-limit",
+    "batching",
+    "mutation-density",
+    "execution-shape"
+  ],
+  "mitigation_signature": {
+    "hazards": [
+      "rate_limit_429",
+      "retry_budget_exhausted"
+    ],
+    "constraints": [
+      "batch writes",
+      "serialize mutations",
+      "reduce mutation density"
+    ],
+    "knobs": [
+      "batch_inline_comments",
+      "mutate_delay_seconds",
+      "prefetch_entity_lists"
+    ],
+    "anti_patterns": [
+      "per-entity mutation loops",
+      "burst writes under shared budgets",
+      "retry hardening without load reduction"
+    ]
+  },
+  "routing_impact": {
+    "default_action": "retry_with_budget",
+    "cooldown_source": "server_hint",
+    "cooldown_scope_key": "provider:github_api",
+    "during_cooldown": {
+      "make_http_call": false,
+      "eligible_for_routing": false,
+      "emit_decision_event": true
+    },
+    "after_cooldown": {
+      "probe_strategy": "single_flight",
+      "max_probe_qps": 0.1
+    }
+  }
+}

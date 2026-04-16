@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-04-16T22:31:26Z",
+  "updated_at": "2026-04-16T23:50:46Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -705,6 +705,25 @@
         "max_elapsed_ms"
       ],
       "path": "receipts/2026/04/PT-2026-04-16-github-copilot-cli-2760-retry-after-timeout-conflict/receipt.json"
+    },
+    {
+      "id": "PT-2026-04-16-github-autoskillit-992-secondary-rate-limit-unbatched-mutations",
+      "date": "2026-04-16",
+      "hazard_class": [
+        "rate_limit_429",
+        "retry_budget_exhausted"
+      ],
+      "source_url": "https://github.com/TalonT-Org/AutoSkillit/issues/992",
+      "repo": "TalonT-Org/AutoSkillit",
+      "signals": [
+        "secondary rate limits hit during PR workflows",
+        "per-entity mutation loops create burst pressure"
+      ],
+      "knobs": [
+        "batch_inline_comments",
+        "mutate_delay_seconds"
+      ],
+      "path": "receipts/2026/04/PT-2026-04-16-github-autoskillit-992-secondary-rate-limit-unbatched-mutations/receipt.json"
     }
   ]
 }
