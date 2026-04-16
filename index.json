@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-04-14T20:55:46Z",
+  "updated_at": "2026-04-16T22:31:26Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -683,6 +683,28 @@
         "checkpoint_policy"
       ],
       "path": "receipts/2026/04/PT-2026-04-13-github-logfwd-1312-delivery-contract-convergence/receipt.json"
+    },
+    {
+      "id": "PT-2026-04-16-github-copilot-cli-2760-retry-after-timeout-conflict",
+      "date": "2026-04-16",
+      "hazard_class": [
+        "rate_limit_429",
+        "retry_budget_exhausted",
+        "timeout_deadline"
+      ],
+      "source_url": "https://github.com/github/copilot-cli/issues/2760",
+      "repo": "github/copilot-cli",
+      "signals": [
+        "429 responses retried immediately without honoring Retry-After",
+        "20+ retries per minute during rate limiting",
+        "client timeout approximately 30-60 seconds"
+      ],
+      "knobs": [
+        "retry_after_floor_ms",
+        "stop_threshold_ms",
+        "max_elapsed_ms"
+      ],
+      "path": "receipts/2026/04/PT-2026-04-16-github-copilot-cli-2760-retry-after-timeout-conflict/receipt.json"
     }
   ]
 }
