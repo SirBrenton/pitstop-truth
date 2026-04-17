@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-04-16T23:50:46Z",
+  "updated_at": "2026-04-17T15:20:21Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -724,6 +724,27 @@
         "mutate_delay_seconds"
       ],
       "path": "receipts/2026/04/PT-2026-04-16-github-autoskillit-992-secondary-rate-limit-unbatched-mutations/receipt.json"
+    },
+    {
+      "id": "PT-2026-04-17-github-sccache-2566-cache-shared-limit-coordination",
+      "date": "2026-04-17",
+      "hazard_class": [
+        "rate_limit_429",
+        "retry_budget_exhausted"
+      ],
+      "source_url": "https://github.com/mozilla/sccache/issues/2566",
+      "repo": "mozilla/sccache",
+      "signals": [
+        "200 cache entry uploads per minute per repository",
+        "Retry-After should be honored before retrying uploads",
+        "cache thrashing discussed separately from 429 handling"
+      ],
+      "knobs": [
+        "upload_concurrency_cap",
+        "max_elapsed_ms",
+        "cache_write_tiering"
+      ],
+      "path": "receipts/2026/04/PT-2026-04-17-github-sccache-2566-cache-shared-limit-coordination/receipt.json"
     }
   ]
 }

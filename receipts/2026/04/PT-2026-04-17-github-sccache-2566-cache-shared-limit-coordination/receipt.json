@@ -1,0 +1,90 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-04-17-github-sccache-2566-cache-shared-limit-coordination",
+  "created_at": "2026-04-17T00:00:00Z",
+  "source": {
+    "url": "https://github.com/mozilla/sccache/issues/2566",
+    "kind": "github_issue",
+    "repo": "mozilla/sccache",
+    "issue_or_pr": 2566
+  },
+  "hazard": {
+    "class": [
+      "rate_limit_429",
+      "retry_budget_exhausted"
+    ],
+    "summary": "A shared repository-level upload limit on GitHub Actions Cache was treated as a local retry concern while cache thrashing and tiering discussions were mixed into the same problem. The result is that per-call retry behavior can remain incorrect even if write volume is reduced architecturally.",
+    "signals": [
+      "GitHub staff imposed 200 cache entry uploads per minute per repository",
+      "429 responses include Retry-After and should not be retried before that time",
+      "GitHub explicitly recommended exponential backoff and bounded retries",
+      "maintainers discussed multi-level caching as a possible fix",
+      "cache thrashing was identified separately from 429 handling",
+      "shared limit applies per repository rather than per process or per upload"
+    ]
+  },
+  "constraints": [
+    "Shared upstream limits must be coordinated across the whole repository workload, not handled only by per-call local retries.",
+    "Retry-After must take precedence over locally calculated backoff.",
+    "Rate-limit correctness and cache-volume/thrashing behavior must be treated as separate control problems.",
+    "Retries against shared service limits must be bounded by attempts or max elapsed time and emit observable diagnostics."
+  ],
+  "knobs": [
+    "retry_after_precedence",
+    "max_retries",
+    "max_elapsed_ms",
+    "upload_concurrency_cap",
+    "debug_retry_logging",
+    "cache_write_tiering"
+  ],
+  "verification": [
+    "Simulate GitHub Actions Cache 429 responses with Retry-After and verify uploads do not retry before the header delay.",
+    "Verify concurrent upload workers do not independently retry into the same shared repository limit without coordination.",
+    "Verify retry loops terminate after bounded attempts or max elapsed time.",
+    "Verify cache tiering or local-directory buffering does not substitute for correct 429 handling semantics."
+  ],
+  "notes": "This receipt is valuable because it separates two failure classes that were initially blended together: shared-limit compliance and cache thrashing. Multi-level caching may reduce write volume, but it does not automatically implement correct Retry-After semantics or shared-limit coordination.",
+  "tags": [
+    "github-actions-cache",
+    "retry-after",
+    "shared-budget",
+    "cache-thrashing",
+    "coordination",
+    "sccache"
+  ],
+  "mitigation_signature": {
+    "hazards": [
+      "rate_limit_429",
+      "retry_budget_exhausted"
+    ],
+    "constraints": [
+      "coordinate retries under shared limits",
+      "honor Retry-After before local backoff",
+      "separate protocol correctness from architectural volume reduction"
+    ],
+    "knobs": [
+      "upload_concurrency_cap",
+      "max_elapsed_ms",
+      "cache_write_tiering"
+    ],
+    "anti_patterns": [
+      "per-call retry under shared repository-level limits",
+      "using architecture changes to avoid fixing 429 semantics",
+      "mixing quota thrash and rate-limit correctness into one fix"
+    ]
+  },
+  "routing_impact": {
+    "default_action": "retry_with_budget",
+    "cooldown_source": "retry_after_header",
+    "cooldown_scope_key": "provider:github_actions_cache:repo",
+    "during_cooldown": {
+      "make_http_call": false,
+      "eligible_for_routing": false,
+      "emit_decision_event": true
+    },
+    "after_cooldown": {
+      "probe_strategy": "single_flight",
+      "max_probe_qps": 0.05
+    }
+  }
+}
