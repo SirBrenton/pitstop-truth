@@ -1,12 +1,12 @@
 {
     "schema": "pitstop-capability.v0",
     "name": "pitstop-truth",
-    "version": "0.1.19",
-    "description": "Machine-readable corpus of AI/API execution failures and execution-shape anti-patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, concurrency amplification, and mutation-density failures — classified, verified, and cross-referenced across production systems.",
+    "version": "0.1.20",
+    "description": "Machine-readable corpus of AI/API execution failures and execution-shape anti-patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, concurrency amplification, mutation-density failures, and shared-budget coordination failures — classified, verified, and cross-referenced across production systems.",
     "capability": "execution_failure_classification",
-    "thesis": "AI/API systems do not fail only because of external limits. They fail because they respond incorrectly — or generate the failure themselves — through retry amplification, misclassification, and poor execution shape under shared constraints.",
+   "thesis": "AI/API systems do not fail only because of external limits. They fail because they respond incorrectly — or generate the failure themselves — through retry amplification, misclassification, poor execution shape, and uncoordinated behavior under shared constraints.",
     "corpus": {
-        "receipts": 36,
+        "receipts": 37,
         "hazard_classes": [
             "rate_limit_429",
             "timeout_deadline",
@@ -31,11 +31,12 @@
             "hiero-ledger/solo",
             "HKUDS/nanobot",
             "github/copilot-cli",
-            "TalonT-Org/AutoSkillit"
+            "TalonT-Org/AutoSkillit",
+            "mozilla/sccache"
         ],
         "date_range": {
             "earliest": "2025-07-15",
-            "latest": "2026-04-16"
+            "latest": "2026-04-17"
         }
     },
     "query": {
@@ -319,6 +320,18 @@
             "canonical_receipt": "PT-2026-04-16-github-autoskillit-992-secondary-rate-limit-unbatched-mutations",
             "fix": "Batch mutations (reviews, GraphQL aliases), serialize writes, and reduce per-entity loops. Treat API budget as a global execution constraint, not per-skill.",
             "note": "This pattern extends Pitstop beyond failure classification into execution-shape failures. The system is not just mishandling 429s — it is manufacturing them through workflow design."
+        },
+        {
+            "id": "shared-budget-coordination-under-retry-after",
+            "hazard": "rate_limit_429",
+            "summary": "A shared repository-level upstream limit was treated as a local retry concern. Architecture changes such as tiering or local buffering may reduce volume, but do not by themselves implement correct Retry-After semantics or coordination across concurrent workers.",
+            "classification": "Shared budget coordination failure",
+            "confirmed_in": [
+                "mozilla/sccache"
+            ],
+            "canonical_receipt": "PT-2026-04-17-github-sccache-2566-cache-shared-limit-coordination",
+            "fix": "Honor Retry-After as authoritative, coordinate retries across workers sharing the same upstream limit, and separate rate-limit correctness from workload-shape fixes like tiering or thrash reduction.",
+            "note": "This pattern extends Pitstop beyond local retry correctness. If the upstream limit is shared at the repo or tenant level, retry cannot be treated as a purely local per-call decision."
         }
     ],
     "detection": {
@@ -335,7 +348,8 @@
             "429 handled without Retry-After",
             "All 429s treated as retryable — CAP vs WAIT not distinguished",
             "No max elapsed bound — retries may be unbounded",
-            "Per-entity mutation loops without batching under shared API budgets"
+            "Per-entity mutation loops without batching under shared API budgets",
+            "Shared upstream limits handled with local-only retries"
         ]
     },
     "classification_model": {
@@ -345,5 +359,5 @@
     },
     "contact": "brentondwilliams@gmail.com",
     "license": "Apache-2.0",
-    "last_updated": "2026-04-16"
+    "last_updated": "2026-04-17"
 }
