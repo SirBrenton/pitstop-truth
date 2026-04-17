@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-04-17T15:51:31Z",
+  "updated_at": "2026-04-17T18:39:36Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -766,6 +766,27 @@
         "http_retry_policy"
       ],
       "path": "receipts/2026/04/PT-2026-04-17-github-elastic-18339-greenhouse-hidden-http-retries/receipt.json"
+    },
+    {
+      "id": "PT-2026-04-17-github-feynman-110-hidden-runtime-retries",
+      "date": "2026-04-17",
+      "hazard_class": [
+        "rate_limit_429",
+        "retry_budget_exhausted"
+      ],
+      "source_url": "https://github.com/getcompanion-ai/feynman/issues/110",
+      "repo": "getcompanion-ai/feynman",
+      "signals": [
+        "runtime layer retries transient provider failures",
+        "agent is not told about transient retries",
+        "context-length errors are explicitly non-retryable"
+      ],
+      "knobs": [
+        "provider_max_retries",
+        "retry_visibility_mode",
+        "provider_retry_policy"
+      ],
+      "path": "receipts/2026/04/PT-2026-04-17-github-feynman-110-hidden-runtime-retries/receipt.json"
     }
   ]
 }
