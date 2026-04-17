@@ -1,12 +1,12 @@
 {
     "schema": "pitstop-capability.v0",
     "name": "pitstop-truth",
-    "version": "0.1.20",
-    "description": "Machine-readable corpus of AI/API execution failures and execution-shape anti-patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, concurrency amplification, mutation-density failures, and shared-budget coordination failures — classified, verified, and cross-referenced across production systems.",
+    "version": "0.1.21",
+    "description": "Machine-readable corpus of AI/API execution failures and execution-shape anti-patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, concurrency amplification, mutation-density failures, shared-budget coordination failures, and hidden retry-ownership failures — classified, verified, and cross-referenced across production systems.",
     "capability": "execution_failure_classification",
-   "thesis": "AI/API systems do not fail only because of external limits. They fail because they respond incorrectly — or generate the failure themselves — through retry amplification, misclassification, poor execution shape, and uncoordinated behavior under shared constraints.",
+    "thesis": "AI/API systems do not fail only because of external limits. They fail because they respond incorrectly — or generate the failure themselves — through retry amplification, misclassification, poor execution shape, uncoordinated behavior under shared constraints, and retry decisions made at the wrong layer.",
     "corpus": {
-        "receipts": 37,
+        "receipts": 38,
         "hazard_classes": [
             "rate_limit_429",
             "timeout_deadline",
@@ -32,7 +32,8 @@
             "HKUDS/nanobot",
             "github/copilot-cli",
             "TalonT-Org/AutoSkillit",
-            "mozilla/sccache"
+            "mozilla/sccache",
+            "elastic/integrations"
         ],
         "date_range": {
             "earliest": "2025-07-15",
@@ -332,6 +333,18 @@
             "canonical_receipt": "PT-2026-04-17-github-sccache-2566-cache-shared-limit-coordination",
             "fix": "Honor Retry-After as authoritative, coordinate retries across workers sharing the same upstream limit, and separate rate-limit correctness from workload-shape fixes like tiering or thrash reduction.",
             "note": "This pattern extends Pitstop beyond local retry correctness. If the upstream limit is shared at the repo or tenant level, retry cannot be treated as a purely local per-call decision."
+        },
+        {
+            "id": "hidden-http-retries-bypass-application-control",
+            "hazard": "rate_limit_429",
+            "summary": "Transport-layer retries consumed rate-limit budget and prevented the application layer from seeing the 429 condition it was designed to handle. Without reset semantics on 429, reactive retry became less effective than proactive pacing and budget checks on successful responses.",
+            "classification": "Retry ownership at the wrong layer",
+            "confirmed_in": [
+                "elastic/integrations"
+            ],
+            "canonical_receipt": "PT-2026-04-17-github-elastic-18339-greenhouse-hidden-http-retries",
+            "fix": "Keep retry ownership at the layer with pagination and budget context, use proactive pacing when 429 reset semantics are absent, and avoid hidden transport retries that bypass application control.",
+            "note": "This pattern extends the corpus from retry tuning into retry ownership. The system failed not because it lacked backoff, but because the wrong layer owned the decision and hid the real signal from the layer that could act on it."
         }
     ],
     "detection": {
@@ -349,7 +362,8 @@
             "All 429s treated as retryable — CAP vs WAIT not distinguished",
             "No max elapsed bound — retries may be unbounded",
             "Per-entity mutation loops without batching under shared API budgets",
-            "Shared upstream limits handled with local-only retries"
+            "Shared upstream limits handled with local-only retries",
+            "Transport retries hide 429 from application-layer control"
         ]
     },
     "classification_model": {
