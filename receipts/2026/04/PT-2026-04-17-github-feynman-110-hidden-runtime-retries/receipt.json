@@ -1,0 +1,89 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-04-17-github-feynman-110-hidden-runtime-retries",
+  "created_at": "2026-04-17T00:00:00Z",
+  "source": {
+    "url": "https://github.com/getcompanion-ai/feynman/issues/110",
+    "kind": "github_issue",
+    "repo": "getcompanion-ai/feynman",
+    "issue_or_pr": 110
+  },
+  "hazard": {
+    "class": [
+      "rate_limit_429",
+      "retry_budget_exhausted"
+    ],
+    "summary": "Provider retries are intentionally handled inside the runtime layer and hidden from the agent. This prevents transient failures from surfacing noisily, but it also suppresses execution signals that the decision layer may need in order to adapt to degraded provider state.",
+    "signals": [
+      "5xx, 429, and timeout errors are intended to retry with backoff",
+      "context-length errors are explicitly non-retryable",
+      "provider calls are wrapped at the runtime layer rather than in individual tools",
+      "the agent is not told about transient retries",
+      "provider-specific retry settings are seeded in runtime configuration",
+      "conversation turn is lost when retries do not recover"
+    ]
+  },
+  "constraints": [
+    "Retry ownership at the runtime layer must not suppress all visibility of degraded execution state from higher decision layers.",
+    "Transient retry and non-retryable context-length failures must remain explicitly separated.",
+    "If retries are hidden from the agent, the system still needs another observable channel for retry count, latency inflation, or provider degradation.",
+    "Clean abstraction must not eliminate the signals required for adaptation, fallback, or user-facing latency decisions."
+  ],
+  "knobs": [
+    "provider_max_retries",
+    "initial_backoff_ms",
+    "backoff_multiplier",
+    "max_delay_ms",
+    "retry_visibility_mode",
+    "provider_retry_policy"
+  ],
+  "verification": [
+    "Verify transient provider failures retry with bounded exponential backoff and jitter.",
+    "Verify context-length failures do not enter the retry path.",
+    "Verify retry activity is observable somewhere outside the hidden runtime layer (logs, events, metrics, or decision receipts).",
+    "Verify the system can adapt when retry counts or backoff latency indicate degraded provider state."
+  ],
+  "notes": "This receipt is not about missing retries. It is about visibility and decision authority. Hiding retries in the runtime may improve abstraction, but it can also create false liveness and prevent the decision layer from adapting when providers are degraded.",
+  "tags": [
+    "runtime-retries",
+    "hidden-retries",
+    "decision-visibility",
+    "provider-degradation",
+    "feynman"
+  ],
+  "mitigation_signature": {
+    "hazards": [
+      "rate_limit_429",
+      "retry_budget_exhausted"
+    ],
+    "constraints": [
+      "separate transient and terminal failures",
+      "preserve visibility of hidden retries",
+      "align retry ownership with decision visibility"
+    ],
+    "knobs": [
+      "provider_max_retries",
+      "retry_visibility_mode",
+      "provider_retry_policy"
+    ],
+    "anti_patterns": [
+      "runtime retries fully hidden from decision layer",
+      "transient and context-length failures share retry path",
+      "degraded provider state invisible to adaptation logic"
+    ]
+  },
+  "routing_impact": {
+    "default_action": "retry_with_budget",
+    "cooldown_source": "server_hint",
+    "cooldown_scope_key": "provider:llm_runtime",
+    "during_cooldown": {
+      "make_http_call": false,
+      "eligible_for_routing": false,
+      "emit_decision_event": true
+    },
+    "after_cooldown": {
+      "probe_strategy": "single_flight",
+      "max_probe_qps": 0.1
+    }
+  }
+}
