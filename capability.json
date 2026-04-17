@@ -1,12 +1,12 @@
 {
     "schema": "pitstop-capability.v0",
     "name": "pitstop-truth",
-    "version": "0.1.21",
-    "description": "Machine-readable corpus of AI/API execution failures and execution-shape anti-patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, concurrency amplification, mutation-density failures, shared-budget coordination failures, and hidden retry-ownership failures — classified, verified, and cross-referenced across production systems.",
+    "version": "0.1.22",
+    "description": "Machine-readable corpus of AI/API execution failures and execution-shape anti-patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, concurrency amplification, mutation-density failures, shared-budget coordination failures, hidden retry-ownership failures, and hidden retry-visibility failures — classified, verified, and cross-referenced across production systems.",
     "capability": "execution_failure_classification",
-    "thesis": "AI/API systems do not fail only because of external limits. They fail because they respond incorrectly — or generate the failure themselves — through retry amplification, misclassification, poor execution shape, uncoordinated behavior under shared constraints, and retry decisions made at the wrong layer.",
+    "thesis": "AI/API systems do not fail only because of external limits. They fail because they respond incorrectly — or generate the failure themselves — through retry amplification, misclassification, poor execution shape, uncoordinated behavior under shared constraints, retry decisions made at the wrong layer, and degraded execution signals hidden from the decision layer.",
     "corpus": {
-        "receipts": 38,
+        "receipts": 39,
         "hazard_classes": [
             "rate_limit_429",
             "timeout_deadline",
@@ -33,7 +33,8 @@
             "github/copilot-cli",
             "TalonT-Org/AutoSkillit",
             "mozilla/sccache",
-            "elastic/integrations"
+            "elastic/integrations",
+            "getcompanion-ai/feynman"
         ],
         "date_range": {
             "earliest": "2025-07-15",
@@ -345,6 +346,18 @@
             "canonical_receipt": "PT-2026-04-17-github-elastic-18339-greenhouse-hidden-http-retries",
             "fix": "Keep retry ownership at the layer with pagination and budget context, use proactive pacing when 429 reset semantics are absent, and avoid hidden transport retries that bypass application control.",
             "note": "This pattern extends the corpus from retry tuning into retry ownership. The system failed not because it lacked backoff, but because the wrong layer owned the decision and hid the real signal from the layer that could act on it."
+        },
+        {
+            "id": "hidden-runtime-retries-suppress-decision-visibility",
+            "hazard": "retry_budget_exhausted",
+            "summary": "Transient provider failures are retried correctly inside the runtime layer, but retry activity is hidden from the agent or higher decision layer. The system appears healthy while operating in a degraded state with inflated latency, cost, or provider pressure.",
+            "classification": "Hidden retry visibility failure",
+            "confirmed_in": [
+                "getcompanion-ai/feynman"
+            ],
+            "canonical_receipt": "PT-2026-04-17-github-feynman-110-hidden-runtime-retries",
+            "fix": "Keep transient and terminal failures separated, but expose retry activity through logs, events, metrics, or receipts so higher layers can adapt to degraded provider state.",
+            "note": "This pattern extends the corpus from retry correctness and retry ownership into retry visibility. Correct handling without visible execution signals can still produce false liveness and non-adaptive behavior."
         }
     ],
     "detection": {
@@ -363,7 +376,8 @@
             "No max elapsed bound — retries may be unbounded",
             "Per-entity mutation loops without batching under shared API budgets",
             "Shared upstream limits handled with local-only retries",
-            "Transport retries hide 429 from application-layer control"
+            "Transport retries hide 429 from application-layer control",
+            "Runtime retries suppress degradation signals from the decision layer"
         ]
     },
     "classification_model": {
