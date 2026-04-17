@@ -1,0 +1,91 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-04-17-github-elastic-18339-greenhouse-hidden-http-retries",
+  "created_at": "2026-04-17T00:00:00Z",
+  "source": {
+    "url": "https://github.com/elastic/integrations/issues/18339",
+    "kind": "github_issue",
+    "repo": "elastic/integrations",
+    "issue_or_pr": 18339
+  },
+  "hazard": {
+    "class": [
+      "rate_limit_429",
+      "retry_budget_exhausted"
+    ],
+    "summary": "HTTP-client retries on 429 occurred below the application layer, preventing the CEL program from seeing the rate-limit signal it was designed to handle. Hidden retries consumed additional budget and amplified pressure until the upstream window reset.",
+    "signals": [
+      "Greenhouse pagination limit is 3 requests per 30 seconds",
+      "429 responses include no Retry-After or reset headers",
+      "underlying HTTP client automatically retries with exponential backoff",
+      "CEL program's explicit 429 handler never executes",
+      "observed sequence of rapid 200s followed by 429 retry cascade",
+      "retried requests eventually succeed once the rate-limit window resets",
+      "successful responses expose X-RateLimit-Remaining headers"
+    ]
+  },
+  "constraints": [
+    "Application-layer rate handling must not be bypassed by hidden transport retries.",
+    "When 429 responses provide no reset semantics, proactive pacing is safer than reactive retry.",
+    "Retry ownership must live at the layer that has the necessary budget and pagination context.",
+    "Successful-response budget headers should be used to stop pagination before entering a 429 cascade."
+  ],
+  "knobs": [
+    "resource_rate_limit_limit",
+    "resource_rate_limit_burst",
+    "response_budget_guard",
+    "http_retry_policy",
+    "pagination_stop_on_budget_exhaustion",
+    "cursor_resume_state"
+  ],
+  "verification": [
+    "Verify the CEL program can observe and respond to rate-limit conditions instead of having them consumed by the HTTP client.",
+    "Verify proactive pacing keeps /events requests within the 3/30s pagination limit.",
+    "Verify pagination stops when X-RateLimit-Remaining budget is exhausted on successful responses.",
+    "Verify 429 retry cascades no longer occur under pagination load."
+  ],
+  "notes": "This receipt is strong because the problem is not simply missing backoff. The deeper failure is retry ownership at the wrong layer: the transport retried automatically, while the application layer — which had pagination and budget context — lost the ability to control behavior. The chosen mitigation is proactive pacing plus successful-response budget checks rather than reactive 429 recovery.",
+  "tags": [
+    "greenhouse",
+    "429",
+    "hidden-retries",
+    "retry-ownership",
+    "pagination",
+    "budget-awareness"
+  ],
+  "mitigation_signature": {
+    "hazards": [
+      "rate_limit_429",
+      "retry_budget_exhausted"
+    ],
+    "constraints": [
+      "keep retry ownership at the layer with rate context",
+      "use proactive pacing when reset semantics are absent",
+      "avoid hidden transport retries that mask application control"
+    ],
+    "knobs": [
+      "resource_rate_limit_limit",
+      "response_budget_guard",
+      "http_retry_policy"
+    ],
+    "anti_patterns": [
+      "transport retries hide 429 from application",
+      "reactive retry without reset semantics",
+      "pagination continues after remaining budget reaches zero"
+    ]
+  },
+  "routing_impact": {
+    "default_action": "retry_with_budget",
+    "cooldown_source": "none",
+    "cooldown_scope_key": "provider:greenhouse_audit_log:pagination",
+    "during_cooldown": {
+      "make_http_call": false,
+      "eligible_for_routing": false,
+      "emit_decision_event": true
+    },
+    "after_cooldown": {
+      "probe_strategy": "single_flight",
+      "max_probe_qps": 0.1
+    }
+  }
+}
