@@ -1,12 +1,12 @@
 {
     "schema": "pitstop-capability.v0",
     "name": "pitstop-truth",
-    "version": "0.1.23",
+    "version": "0.1.24",
     "description": "Machine-readable corpus of AI/API execution failures and execution-shape anti-patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, concurrency amplification, mutation-density failures, shared-budget coordination failures, hidden retry-ownership failures, and hidden retry-visibility failures \u2014 classified, verified, and cross-referenced across production systems.",
     "capability": "execution_failure_classification",
-    "thesis": "AI/API systems do not fail only because of external limits. They fail because they respond incorrectly \u2014 or generate the failure themselves \u2014 through retry amplification, misclassification, poor execution shape, uncoordinated behavior under shared constraints, retry decisions made at the wrong layer, and degraded execution signals hidden from the decision layer.",
+    "thesis": "AI/API systems fail when execution constraints are misclassified, hidden, scoped incorrectly, or owned by the wrong layer. The recurring result is retry amplification, false liveness, blocked failover, and avoidable cost under shared constraints.",
     "corpus": {
-        "receipts": 41,
+        "receipts": 42,
         "hazard_classes": [
             "rate_limit_429",
             "timeout_deadline",
@@ -383,6 +383,18 @@
             "canonical_receipt": "PT-2026-04-19-github-openclaw-68474-cline-10139-cross-repo-propagation",
             "fix": "Inject x-should-retry: false when Retry-After exceeds configurable threshold (OPENCLAW_SDK_RETRY_MAX_WAIT_SECONDS). Parse retry-after-ms variant. Safe no-op for SDKs that do not check the header.",
             "note": "This is not a new failure pattern \u2014 it is the first documented case of the corpus acting as a reference standard. One well-documented issue became the implementation reference for a fix in a separate codebase. The standard is beginning to propagate without direct intervention."
+        },
+        {
+            "id": "headerless-429-from-hidden-enforcer",
+            "hazard": "rate_limit_429",
+            "summary": "A hidden enforcement layer returns persistent 429 responses without Retry-After or rate-limit metadata, even though the system internally enforces a deterministic recovery window. Downstream retry, failover, and UX layers are forced into blind behavior because the recovery signal is not propagated.",
+            "classification": "Constraint enforced without signal propagation",
+            "confirmed_in": [
+                "anthropics/claude-code"
+            ],
+            "canonical_receipt": "PT-2026-04-19-github-claude-code-50830-headerless-429-hidden-enforcer",
+            "fix": "Propagate recovery metadata across enforcement layers. A 429 without retry timing or scope information must be treated as an ambiguous degraded signal, not as a normal retryable throttle.",
+            "note": "This pattern strengthens the emerging Hidden Enforcer concept: the system knows the constraint and enforces a fixed recovery window (e.g. TTL-based), but does not expose that information to downstream decision layers. This creates a new failure class: constraints enforced without observable recovery signals."
         }
     ],
     "detection": {
