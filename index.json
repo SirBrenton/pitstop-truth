@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-04-17T18:39:36Z",
+  "updated_at": "2026-04-19T18:50:51Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -787,6 +787,48 @@
         "provider_retry_policy"
       ],
       "path": "receipts/2026/04/PT-2026-04-17-github-feynman-110-hidden-runtime-retries/receipt.json"
+    },
+    {
+      "id": "PT-2026-04-04-github-cline-10139-long-retry-after-misclassified-as-wait",
+      "date": "2026-04-04",
+      "hazard_class": [
+        "rate_limit_429",
+        "retry_budget_exhausted"
+      ],
+      "source_url": "https://github.com/cline/cline/issues/10139",
+      "repo": "cline/cline",
+      "signals": [
+        "long Retry-After honored for timing but not for retry eligibility",
+        "quota-exhaustion 429 retried instead of surfaced",
+        "failover path blocked behind retry loop"
+      ],
+      "knobs": [
+        "retry_after_stop_threshold_ms",
+        "x-should-retry-header",
+        "max_elapsed_ms"
+      ],
+      "path": "receipts/2026/04/PT-2026-04-04-github-cline-10139-long-retry-after-misclassified-as-wait/receipt.json"
+    },
+    {
+      "id": "PT-2026-04-19-github-openclaw-68474-cline-10139-cross-repo-propagation",
+      "date": "2026-04-19",
+      "hazard_class": [
+        "rate_limit_429",
+        "retry_budget_exhausted"
+      ],
+      "source_url": "https://github.com/openclaw/openclaw/pull/68474",
+      "repo": "openclaw/openclaw",
+      "signals": [
+        "cross-repo propagation via issue citation",
+        "taxonomy adopted without direct intervention",
+        "x-should-retry: false injected when retry-after > 60s"
+      ],
+      "knobs": [
+        "sdk_retry_max_wait_seconds",
+        "x-should-retry-header",
+        "retry-after-ms-parsing"
+      ],
+      "path": "receipts/2026/04/PT-2026-04-19-github-openclaw-68474-cline-10139-cross-repo-propagation/receipt.json"
     }
   ]
 }
