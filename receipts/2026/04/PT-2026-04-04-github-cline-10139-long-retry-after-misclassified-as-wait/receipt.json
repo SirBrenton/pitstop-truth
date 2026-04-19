@@ -1,0 +1,97 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-04-04-github-cline-10139-long-retry-after-misclassified-as-wait",
+  "created_at": "2026-04-04T12:26:00Z",
+  "source": {
+    "url": "https://github.com/cline/cline/issues/10139",
+    "kind": "github_issue",
+    "repo": "cline/cline",
+    "issue_or_pr": 10139
+  },
+  "hazard": {
+    "class": [
+      "rate_limit_429",
+      "retry_budget_exhausted"
+    ],
+    "summary": "A 429 with a long Retry-After is honored for delay timing but still treated as retryable, causing quota-exhaustion windows to block execution for hours and consume retry attempts instead of surfacing immediately.",
+    "signals": [
+      "retry.ts reads retry-after correctly for delay calculation",
+      "all 429 responses enter the same retry path regardless of retry-after magnitude",
+      "short retry-after (e.g. 30s) and long retry-after (e.g. 3+ hours) handled identically",
+      "quota-exhaustion 429 waits full delay then retries into same non-recoverable condition",
+      "retry-after: 11180000ms (~3 hours) observed in production \u2014 anthropic/claude-sonnet-4-6",
+      "error delayed instead of surfaced to user or failover layer",
+      "maintainer confirmed: header-derived delay not used to decide whether retrying makes sense"
+    ]
+  },
+  "constraints": [
+    "Retry-After duration must influence retry eligibility, not just retry delay timing.",
+    "Long retry windows that exceed the useful execution scope must be surfaced as terminal for the current run.",
+    "A 429 status code alone is insufficient to determine whether retrying is meaningful.",
+    "Retries must stop when the server has effectively signaled that recovery cannot occur within the active execution context."
+  ],
+  "knobs": [
+    "retry_after_stop_threshold_ms \u2014 ceiling above which retry is suppressed (suggested: 300000ms / 5 min)",
+    "x-should-retry: false header injection \u2014 signals Anthropic/OpenAI SDK to skip retry in shouldRetry()",
+    "max_retries",
+    "max_elapsed_ms",
+    "sdk_retry_enabled",
+    "failover_on_long_retry_after"
+  ],
+  "verification": [
+    "Trigger a 429 with a short Retry-After and verify the request retries normally within budget.",
+    "Trigger a 429 with a long Retry-After (quota exhaustion) and verify error surfaces immediately without consuming retry attempts.",
+    "Verify long-window 429s reach the higher-level failover or user-facing error path.",
+    "Verify threshold behavior is configurable and does not break short transient-throttle retries.",
+    "Verify x-should-retry: false header causes SDK shouldRetry() to skip retry and surface RateLimitError."
+  ],
+  "notes": "This is a canonical WAIT vs STOP failure. The system had the right signal in hand \u2014 Retry-After magnitude \u2014 but only used it for scheduling delay, not for deciding whether retrying was still rational. The result was silent multi-hour blocking, wasted attempt budget, and delayed surfacing of a non-recoverable condition.\n\nThe deepest invariant this receipt proves: Retry-After is not just 'when.' It is also 'whether.'\n\nClineXDiego confirmed root cause within 24 hours. PR #10140 opened same day by zerone0x. Fix: inject x-should-retry: false when retry-after exceeds threshold, causing SDK shouldRetry() to skip retry and surface RateLimitError immediately to the failover layer. Short retry-after values left untouched \u2014 transient throttling path unaffected.\n\nPattern propagated autonomously to OpenClaw without direct intervention \u2014 see PT-2026-04-19-github-openclaw-68474-cline-10139-cross-repo-propagation. This is the first corpus case where the fix generalized cross-repo via issue citation alone.\n\nClassification rules:\n  retry-after > stop_threshold_ms \u2192 STOP \u2192 inject x-should-retry: false \u2192 surface immediately\n  retry-after <= stop_threshold_ms \u2192 WAIT \u2192 retry with delay\n\nDetection thresholds:\n  retry-after > 300s (5 minutes) is strong STOP signal\n  retry-after > 3600s (1 hour) is unambiguous quota exhaustion",
+  "tags": [
+    "429",
+    "retry-after",
+    "wait-vs-stop",
+    "quota-exhaustion",
+    "false-liveness",
+    "failover-blocking",
+    "cline",
+    "decision-authority"
+  ],
+  "mitigation_signature": {
+    "hazards": [
+      "rate_limit_429",
+      "retry_budget_exhausted"
+    ],
+    "constraints": [
+      "use retry-after magnitude as a decision signal not just a delay signal",
+      "surface non-recoverable long-window throttles immediately",
+      "separate transient throttling from quota exhaustion"
+    ],
+    "knobs": [
+      "retry_after_stop_threshold_ms",
+      "x-should-retry-header",
+      "max_elapsed_ms",
+      "failover_on_long_retry_after"
+    ],
+    "anti_patterns": [
+      "all 429s treated as retryable",
+      "retry-after used only for delay timing",
+      "multi-hour wait loops inside a single run",
+      "failover layer blocked behind SDK retry behavior",
+      "magnitude of signal ignored while presence of signal is honored"
+    ]
+  },
+  "routing_impact": {
+    "default_action": "fail_fast",
+    "cooldown_source": "retry_after_header",
+    "cooldown_scope_key": "provider_or_model",
+    "during_cooldown": {
+      "make_http_call": false,
+      "eligible_for_routing": false,
+      "emit_decision_event": true
+    },
+    "after_cooldown": {
+      "probe_strategy": "single_flight",
+      "max_probe_qps": 0.05
+    }
+  }
+}

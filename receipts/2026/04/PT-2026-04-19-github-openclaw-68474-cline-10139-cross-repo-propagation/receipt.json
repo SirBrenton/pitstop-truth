@@ -1,0 +1,77 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-04-19-github-openclaw-68474-cline-10139-cross-repo-propagation",
+  "created_at": "2026-04-19T00:00:00Z",
+  "source": {
+    "url": "https://github.com/openclaw/openclaw/pull/68474",
+    "kind": "github_pr",
+    "repo": "openclaw/openclaw",
+    "issue_or_pr": 68474,
+    "references": "https://github.com/cline/cline/issues/10139"
+  },
+  "hazard": {
+    "class": [
+      "rate_limit_429",
+      "retry_budget_exhausted"
+    ],
+    "summary": "Same quota exhaustion STOP misclassification from cline #10139 independently propagated and fixed in OpenClaw without direct intervention \u2014 taxonomy adopted cross-repo",
+    "signals": [
+      "retry-after: 239s (Anthropic quota exhaustion)",
+      "SDK sleeps full duration before retrying \u2014 blocks OpenClaw failover layer",
+      "x-should-retry: false injected when retry-after > 60s",
+      "Anthropic/OpenAI SDKs check header first in shouldRetry() \u2014 skip retry immediately",
+      "Google/Ollama SDKs ignore header safely \u2014 no-op for non-affected providers",
+      "OPENCLAW_SDK_RETRY_MAX_WAIT_SECONDS configurable threshold"
+    ]
+  },
+  "constraints": [
+    "retry-after above threshold MUST inject x-should-retry: false before SDK retry logic runs",
+    "fix MUST be safe no-op for SDKs that do not check the header",
+    "short retry-after values MUST remain unaffected \u2014 transient throttling path preserved"
+  ],
+  "knobs": [
+    "OPENCLAW_SDK_RETRY_MAX_WAIT_SECONDS \u2014 configurable retry-after ceiling (default: 60s)",
+    "x-should-retry: false header \u2014 injected into response before SDK shouldRetry() runs",
+    "retry-after-ms variant \u2014 parsed alongside standard retry-after for OpenAI compatibility"
+  ],
+  "verification": [
+    "Trigger Anthropic 429 with retry-after > 60s (quota exhaustion)",
+    "Verify x-should-retry: false injected into response",
+    "Verify SDK skips retry and surfaces RateLimitError immediately",
+    "Verify OpenClaw failover layer receives error and routes correctly",
+    "Verify retry-after < 60s still retries normally"
+  ],
+  "notes": "This receipt documents cross-repo taxonomy propagation. jetd1 (OpenClaw contributor) independently implemented the same fix as cline PR #10140, explicitly citing cline/cline#10139 in commit messages. No direct involvement from Pitstop \u2014 the issue was clear enough to reference and generalize without prompting. This is the first corpus receipt documenting autonomous taxonomy adoption. The OpenClaw fix is more sophisticated than the cline fix: it parses retry-after-ms variant, makes the threshold configurable via environment variable, and explicitly handles the Google/Ollama SDK no-op case. Pattern: one well-documented issue becomes the reference implementation for a class of fixes across multiple repos.\n\nClassification rules:\n  retry-after > SDK_RETRY_MAX_WAIT_SECONDS \u2192 inject x-should-retry: false \u2192 STOP\n  retry-after <= threshold \u2192 normal SDK retry \u2192 WAIT\n\nDetection thresholds:\n  60s default threshold distinguishes transient from quota exhaustion in practice\n  threshold should be configurable per deployment context",
+  "tags": [
+    "rate_limit",
+    "quota_exhaustion",
+    "stop_misclassified",
+    "cross_repo_propagation",
+    "taxonomy_adoption",
+    "sdk"
+  ],
+  "mitigation_signature": {
+    "hazards": [
+      "quota_exhaustion_429",
+      "stop_retried_as_wait",
+      "failover_blocked"
+    ],
+    "constraints": [
+      "retry_after_magnitude_gates_retry",
+      "header_injection_before_sdk_retry",
+      "threshold_configurable"
+    ],
+    "knobs": [
+      "sdk_retry_max_wait_seconds",
+      "x-should-retry-header",
+      "retry-after-ms-parsing"
+    ],
+    "anti_patterns": [
+      "sdk_retry_blocks_failover",
+      "all_providers_treated_identically"
+    ]
+  },
+  "routing_impact": {
+    "default_action": "fail_fast"
+  }
+}
