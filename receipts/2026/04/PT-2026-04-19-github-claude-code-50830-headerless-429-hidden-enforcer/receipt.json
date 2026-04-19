@@ -1,0 +1,93 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-04-19-github-claude-code-50830-headerless-429-hidden-enforcer",
+  "created_at": "2026-04-19T00:00:00Z",
+  "source": {
+    "url": "https://github.com/anthropics/claude-code/issues/50830",
+    "kind": "github_issue",
+    "repo": "anthropics/claude-code",
+    "issue_or_pr": 50830
+  },
+  "hazard": {
+    "class": [
+      "rate_limit_429",
+      "retry_budget_exhausted"
+    ],
+    "summary": "A hidden beta enforcement layer returns persistent 429 responses with no retry metadata after a cross-model cache-miss surge, preventing the client from classifying recovery timing or behaving correctly within the lockout window.",
+    "signals": [
+      "switch from claude-sonnet-4-6 to claude-opus-4-7 with context-1m beta triggers first 429",
+      "429 response includes no anthropic-ratelimit-* headers",
+      "429 response includes no retry-after header",
+      "response body is generic rate_limit_error with message 'Error'",
+      "first successful Opus request shows ~209698 tokens of fresh ephemeral_1h cache creation",
+      "429 persists for ~71 minutes and then clears automatically",
+      "recovery timing matches ephemeral_1h TTL rather than client behavior",
+      "Haiku continues working while Opus and Sonnet are blocked"
+    ]
+  },
+  "constraints": [
+    "A 429 response must include actionable recovery metadata when the recovery window is deterministic or enforceable.",
+    "Clients cannot distinguish WAIT vs STOP correctly when the enforcement layer withholds retry timing and quota context.",
+    "Cross-model cache incompatibility that triggers large cache recreation must be surfaced as an execution constraint, not as a generic rate-limit error.",
+    "Hidden enforcement layers must preserve enough metadata for downstream retry, failover, and user-facing policy decisions."
+  ],
+  "knobs": [
+    "retry_after_header",
+    "rate_limit_metadata_passthrough",
+    "cache_mode_on_model_switch",
+    "ephemeral_cache_ttl_seconds",
+    "model_switch_cache_downgrade",
+    "failover_on_headerless_429"
+  ],
+  "verification": [
+    "Reproduce a model switch from a cached Sonnet session to Opus with context-1m beta and verify the client receives explicit recovery metadata on 429.",
+    "Verify a deterministic lockout window is surfaced via retry-after or equivalent metadata rather than a generic error.",
+    "Verify retry logic and failover logic can classify the response without relying on guesswork.",
+    "Verify model-switch behavior warns about or mitigates large fresh ephemeral_1h cache creation."
+  ],
+  "notes": "This receipt is stronger than a normal 429 handling issue because the server appears to know the real constraint and recovery window but does not expose it. The result is not only bad UX; it prevents correct execution policy in the client. The deeper pattern is a hidden enforcer emitting a surface error without the metadata needed to make a correct decision.",
+  "tags": [
+    "429",
+    "headerless-429",
+    "hidden-enforcer",
+    "retry-after-missing",
+    "cache-miss",
+    "ephemeral-1h",
+    "claude-code"
+  ],
+  "mitigation_signature": {
+    "hazards": [
+      "rate_limit_429",
+      "retry_budget_exhausted"
+    ],
+    "constraints": [
+      "preserve enforcement metadata across layers",
+      "surface deterministic recovery windows explicitly",
+      "do not emit generic 429s from hidden quota or cache enforcers"
+    ],
+    "knobs": [
+      "rate_limit_metadata_passthrough",
+      "cache_mode_on_model_switch",
+      "failover_on_headerless_429"
+    ],
+    "anti_patterns": [
+      "429 without retry-after or quota headers",
+      "generic rate_limit_error masking deterministic lockout",
+      "cross-model cache miss triggers opaque one-hour block"
+    ]
+  },
+  "routing_impact": {
+    "default_action": "defer_and_probe",
+    "cooldown_source": "none",
+    "cooldown_scope_key": "provider:model_or_beta_enforcer",
+    "during_cooldown": {
+      "make_http_call": false,
+      "eligible_for_routing": false,
+      "emit_decision_event": true
+    },
+    "after_cooldown": {
+      "probe_strategy": "single_flight",
+      "max_probe_qps": 0.02
+    }
+  }
+}

@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-04-19T18:50:51Z",
+  "updated_at": "2026-04-19T22:24:02Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -829,6 +829,27 @@
         "retry-after-ms-parsing"
       ],
       "path": "receipts/2026/04/PT-2026-04-19-github-openclaw-68474-cline-10139-cross-repo-propagation/receipt.json"
+    },
+    {
+      "id": "PT-2026-04-19-github-claude-code-50830-headerless-429-hidden-enforcer",
+      "date": "2026-04-19",
+      "hazard_class": [
+        "rate_limit_429",
+        "retry_budget_exhausted"
+      ],
+      "source_url": "https://github.com/anthropics/claude-code/issues/50830",
+      "repo": "anthropics/claude-code",
+      "signals": [
+        "429 emitted with no retry-after or anthropic-ratelimit headers",
+        "cross-model cache miss forces large ephemeral_1h cache creation",
+        "lockout duration tracks ephemeral_1h TTL"
+      ],
+      "knobs": [
+        "rate_limit_metadata_passthrough",
+        "cache_mode_on_model_switch",
+        "failover_on_headerless_429"
+      ],
+      "path": "receipts/2026/04/PT-2026-04-19-github-claude-code-50830-headerless-429-hidden-enforcer/receipt.json"
     }
   ]
 }
