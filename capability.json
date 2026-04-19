@@ -1,12 +1,12 @@
 {
     "schema": "pitstop-capability.v0",
     "name": "pitstop-truth",
-    "version": "0.1.22",
-    "description": "Machine-readable corpus of AI/API execution failures and execution-shape anti-patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, concurrency amplification, mutation-density failures, shared-budget coordination failures, hidden retry-ownership failures, and hidden retry-visibility failures — classified, verified, and cross-referenced across production systems.",
+    "version": "0.1.23",
+    "description": "Machine-readable corpus of AI/API execution failures and execution-shape anti-patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, concurrency amplification, mutation-density failures, shared-budget coordination failures, hidden retry-ownership failures, and hidden retry-visibility failures \u2014 classified, verified, and cross-referenced across production systems.",
     "capability": "execution_failure_classification",
-    "thesis": "AI/API systems do not fail only because of external limits. They fail because they respond incorrectly — or generate the failure themselves — through retry amplification, misclassification, poor execution shape, uncoordinated behavior under shared constraints, retry decisions made at the wrong layer, and degraded execution signals hidden from the decision layer.",
+    "thesis": "AI/API systems do not fail only because of external limits. They fail because they respond incorrectly \u2014 or generate the failure themselves \u2014 through retry amplification, misclassification, poor execution shape, uncoordinated behavior under shared constraints, retry decisions made at the wrong layer, and degraded execution signals hidden from the decision layer.",
     "corpus": {
-        "receipts": 39,
+        "receipts": 41,
         "hazard_classes": [
             "rate_limit_429",
             "timeout_deadline",
@@ -34,11 +34,12 @@
             "TalonT-Org/AutoSkillit",
             "mozilla/sccache",
             "elastic/integrations",
-            "getcompanion-ai/feynman"
+            "getcompanion-ai/feynman",
+            "cline/cline"
         ],
         "date_range": {
             "earliest": "2025-07-15",
-            "latest": "2026-04-17"
+            "latest": "2026-04-19"
         }
     },
     "query": {
@@ -280,7 +281,7 @@
             "id": "shared-upstream-fetch-without-auth-or-cache",
             "hazard": "rate_limit_429",
             "summary": "Unauthenticated or uncached requests to a shared upstream resource in CI can fail deterministically with 429 under concurrency. Retry alone does not resolve the problem because all workers draw from the same upstream capacity pool.",
-            "classification": "CAP — shared upstream capacity exhausted without identity or caching",
+            "classification": "CAP \u2014 shared upstream capacity exhausted without identity or caching",
             "confirmed_in": [
                 "hiero-ledger/solo"
             ],
@@ -315,13 +316,13 @@
             "id": "secondary-rate-limit-from-unbatched-mutation-loops",
             "hazard": "rate_limit_429",
             "summary": "Secondary rate limits triggered by unbatched per-entity mutations and bursty write patterns. Individually correct operations compose into excessive mutation density under a shared API budget.",
-            "classification": "Execution shape failure — avoidable pressure under shared budget",
+            "classification": "Execution shape failure \u2014 avoidable pressure under shared budget",
             "confirmed_in": [
                 "TalonT-Org/AutoSkillit"
             ],
             "canonical_receipt": "PT-2026-04-16-github-autoskillit-992-secondary-rate-limit-unbatched-mutations",
             "fix": "Batch mutations (reviews, GraphQL aliases), serialize writes, and reduce per-entity loops. Treat API budget as a global execution constraint, not per-skill.",
-            "note": "This pattern extends Pitstop beyond failure classification into execution-shape failures. The system is not just mishandling 429s — it is manufacturing them through workflow design."
+            "note": "This pattern extends Pitstop beyond failure classification into execution-shape failures. The system is not just mishandling 429s \u2014 it is manufacturing them through workflow design."
         },
         {
             "id": "shared-budget-coordination-under-retry-after",
@@ -358,6 +359,30 @@
             "canonical_receipt": "PT-2026-04-17-github-feynman-110-hidden-runtime-retries",
             "fix": "Keep transient and terminal failures separated, but expose retry activity through logs, events, metrics, or receipts so higher layers can adapt to degraded provider state.",
             "note": "This pattern extends the corpus from retry correctness and retry ownership into retry visibility. Correct handling without visible execution signals can still produce false liveness and non-adaptive behavior."
+        },
+        {
+            "id": "long-retry-after-misclassified-as-wait",
+            "hazard": "rate_limit_429",
+            "summary": "A 429 with a long Retry-After is honored for delay timing but still treated as retryable. Quota exhaustion windows block execution for hours and consume retry attempts instead of surfacing immediately.",
+            "classification": "STOP misclassified as WAIT \u2014 Retry-After magnitude ignored as decision signal",
+            "confirmed_in": [
+                "cline/cline"
+            ],
+            "canonical_receipt": "PT-2026-04-04-github-cline-10139-long-retry-after-misclassified-as-wait",
+            "fix": "Treat Retry-After magnitude as a decision signal, not just a delay signal. Inject x-should-retry: false when Retry-After exceeds threshold. Surface immediately to failover layer.",
+            "note": "The invariant this receipt proves: Retry-After is not just when \u2014 it is also whether. Confirmed and fixed within 24 hours of filing. Pattern subsequently propagated autonomously to OpenClaw \u2014 see cross-repo-taxonomy-propagation."
+        },
+        {
+            "id": "cross-repo-taxonomy-propagation",
+            "hazard": "rate_limit_429",
+            "summary": "The same WAIT vs STOP misclassification documented in cline #10139 was independently fixed in OpenClaw via explicit issue citation \u2014 without direct Pitstop intervention. First corpus case of autonomous cross-repo taxonomy adoption.",
+            "classification": "STOP misclassified as WAIT \u2014 fix propagated autonomously via issue reference",
+            "confirmed_in": [
+                "openclaw/openclaw"
+            ],
+            "canonical_receipt": "PT-2026-04-19-github-openclaw-68474-cline-10139-cross-repo-propagation",
+            "fix": "Inject x-should-retry: false when Retry-After exceeds configurable threshold (OPENCLAW_SDK_RETRY_MAX_WAIT_SECONDS). Parse retry-after-ms variant. Safe no-op for SDKs that do not check the header.",
+            "note": "This is not a new failure pattern \u2014 it is the first documented case of the corpus acting as a reference standard. One well-documented issue became the implementation reference for a fix in a separate codebase. The standard is beginning to propagate without direct intervention."
         }
     ],
     "detection": {
@@ -372,8 +397,8 @@
         "repo": "https://github.com/SirBrenton/pitstop-check",
         "rules": [
             "429 handled without Retry-After",
-            "All 429s treated as retryable — CAP vs WAIT not distinguished",
-            "No max elapsed bound — retries may be unbounded",
+            "All 429s treated as retryable \u2014 CAP vs WAIT not distinguished",
+            "No max elapsed bound \u2014 retries may be unbounded",
             "Per-entity mutation loops without batching under shared API budgets",
             "Shared upstream limits handled with local-only retries",
             "Transport retries hide 429 from application-layer control",
@@ -385,7 +410,7 @@
         "CAP": "Concurrency or throughput limit. Reduce parallel requests. Do not retry immediately.",
         "STOP": "Quota exhaustion or terminal error. Do not retry. Surface to caller. Wait for reset."
     },
-    "contact": "brentondwilliams@gmail.com",
+    "contact": "brent@pitstop.dev",
     "license": "Apache-2.0",
-    "last_updated": "2026-04-17"
+    "last_updated": "2026-04-19"
 }
