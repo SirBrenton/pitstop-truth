@@ -168,6 +168,13 @@ Optional fields may be omitted.
 - `tags`: array of strings for lightweight grouping  
   (e.g. `ci`, `rate_limit`, `timeout`, `driver`, `control_plane`)
 
+- `signal_failure_type`: where in the signal chain the failure occurred  
+  Values: `missing` | `ignored` | `hidden` | `overridden`  
+  - `missing` — signal never emitted by the enforcing system  
+  - `ignored` — signal present but unused by the client  
+  - `hidden` — signal suppressed by an intermediate layer  
+  - `overridden` — signal nullified by transport or timeout
+
 - `mitigation_signature`: compact, comparable summary of the guardrail pattern  
   Intended for clustering and deduplication across receipts.  
   Typical structure:

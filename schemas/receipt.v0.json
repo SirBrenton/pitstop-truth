@@ -117,6 +117,12 @@
     "tags": {
       "type": "array",
       "items": { "type": "string" }
+    },
+    
+    "signal_failure_type": {
+    "type": "string",
+    "enum": ["missing", "ignored", "hidden", "overridden"],
+    "description": "Where in the signal chain the failure occurred. missing=never emitted, ignored=present but unused, hidden=suppressed by layer, overridden=nullified by transport or timeout"
     }
   },
   "additionalProperties": false
