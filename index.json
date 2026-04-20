@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-04-19T22:24:02Z",
+  "updated_at": "2026-04-20T22:53:01Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -850,6 +850,26 @@
         "failover_on_headerless_429"
       ],
       "path": "receipts/2026/04/PT-2026-04-19-github-claude-code-50830-headerless-429-hidden-enforcer/receipt.json"
+    },
+    {
+      "id": "PT-2026-04-20-github-oh-my-claudecode-2745-detector-actor-mismatch",
+      "date": "2026-04-20",
+      "hazard_class": [
+        "rate_limit_429",
+        "retry_budget_exhausted"
+      ],
+      "source_url": "https://github.com/Yeachan-Heo/oh-my-claudecode/issues/2745",
+      "repo": "Yeachan-Heo/oh-my-claudecode",
+      "signals": [
+        "detector narrowed but actor not updated",
+        "degraded 429 treated as quota exhaustion",
+        "resume path fires on stale degraded state"
+      ],
+      "knobs": [
+        "resume_guard_degraded_check",
+        "confirmed_limited_state_forwarding"
+      ],
+      "path": "receipts/2026/04/PT-2026-04-20-github-oh-my-claudecode-2745-detector-actor-mismatch/receipt.json"
     }
   ]
 }

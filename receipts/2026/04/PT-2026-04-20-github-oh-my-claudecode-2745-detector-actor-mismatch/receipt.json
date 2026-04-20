@@ -1,0 +1,83 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-04-20-github-oh-my-claudecode-2745-detector-actor-mismatch",
+  "created_at": "2026-04-20T00:00:00Z",
+  "source": {
+    "url": "https://github.com/Yeachan-Heo/oh-my-claudecode/issues/2745",
+    "kind": "github_issue",
+    "repo": "Yeachan-Heo/oh-my-claudecode",
+    "issue_or_pr": 2745
+  },
+  "hazard": {
+    "class": ["rate_limit_429", "retry_budget_exhausted"],
+    "summary": "Rate-limit daemon treats transient Usage API 429 identically to quota exhaustion. Detector was narrowed to distinguish WAIT from STOP, but the actor (resume path) was not updated to match — creating a detector-actor mismatch where correct classification produces incomplete enforcement.",
+    "signals": [
+      "shouldMonitorBlockedPanes() returns true for both isLimited and isRateLimitStatusDegraded",
+      "wasLimited && !isNowLimited resume path fires on degraded 429 state",
+      "degraded stale-cache 429 treated as quota exhaustion — panes blocked unnecessarily",
+      "sequence limited → degraded 429 → clean non-limited causes resume to never fire",
+      "30-second transport timeout on checkRateLimitStatus can stale rateLimitStatus independently"
+    ]
+  },
+  "constraints": [
+    "A detector narrowed to distinguish failure classes must be matched by equivalent narrowing in all actors that consume its output.",
+    "Degraded stale-cache 429 states must never be treated as either block or resume signals — only confirmed state transitions qualify.",
+    "Three states must be modeled explicitly: STOP (isLimited), WAIT-cleared (not limited, not degraded), and degraded (not limited, but stale data).",
+    "The resume path must carry confirmed-limited state forward across degraded polls to avoid missing genuine clear transitions."
+  ],
+  "knobs": [
+    "shouldMonitorBlockedPanes — scope to isLimited only, not degraded states",
+    "shouldResumeBlockedPanesOnStatusChange — add !isRateLimitStatusDegraded(nextStatus) guard",
+    "confirmed-limited state forwarding across degraded polls",
+    "transport timeout alignment with poll interval"
+  ],
+  "verification": [
+    "Trigger confirmed quota exhaustion — verify panes block correctly",
+    "Trigger transient Usage API 429 — verify panes do NOT block",
+    "Simulate sequence: limited → degraded 429 → clean — verify panes resume after clean, not after degraded",
+    "Verify 30s transport timeout does not falsely clear rate limit state"
+  ],
+  "notes": "Filed as static analysis finding. Owner opened PR #2746 within 5 minutes. Two automated reviewers (AI triage agent + Codex bot) approved the initial fix. Human review caught the resume path regression: the detector was narrowed correctly but the actor still fired on degraded state. Second commit implemented the resume guard. PR merged to dev within one hour of issue filing.\n\nThis receipt documents a failure class distinct from missing classification or wrong classification: the detector was fixed but the actor was not updated to match. The invariant: the fix that narrows the detector must also narrow the actor.\n\nNotable: this is the fastest fix-to-merge in the corpus. The detector-actor mismatch was subtle enough that two automated code review systems approved an incomplete fix.",
+  "tags": [
+    "429",
+    "wait-vs-stop",
+    "detector-actor-mismatch",
+    "daemon",
+    "three-state",
+    "automated-review-gap"
+  ],
+  "signal_failure_type": "ignored",
+  "mitigation_signature": {
+    "hazards": ["rate_limit_429", "detector_actor_mismatch"],
+    "constraints": [
+      "detector narrowing must propagate to all actors",
+      "three-state modeling required for degraded 429 paths",
+      "confirmed state must persist across degraded polls"
+    ],
+    "knobs": [
+      "resume_guard_degraded_check",
+      "confirmed_limited_state_forwarding",
+      "transport_timeout_alignment"
+    ],
+    "anti_patterns": [
+      "narrowing detector without updating actor",
+      "binary limited/not-limited modeling for three-state systems",
+      "resume path firing on stale degraded data",
+      "automated review approving incomplete state machine fix"
+    ]
+  },
+  "routing_impact": {
+    "default_action": "defer_and_probe",
+    "cooldown_source": "server_hint",
+    "cooldown_scope_key": "usage_api_state",
+    "during_cooldown": {
+      "make_http_call": false,
+      "eligible_for_routing": false,
+      "emit_decision_event": true
+    },
+    "after_cooldown": {
+      "probe_strategy": "single_flight",
+      "max_probe_qps": 0.033
+    }
+  }
+}
