@@ -89,5 +89,6 @@
       "probe_strategy": "single_flight",
       "max_probe_qps": 0.1
     }
-  }
+  },
+  "signal_failure_type": "overridden"
 }

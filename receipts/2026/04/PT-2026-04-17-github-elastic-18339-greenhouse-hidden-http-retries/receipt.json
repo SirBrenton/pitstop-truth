@@ -44,7 +44,7 @@
     "Verify pagination stops when X-RateLimit-Remaining budget is exhausted on successful responses.",
     "Verify 429 retry cascades no longer occur under pagination load."
   ],
-  "notes": "This receipt is strong because the problem is not simply missing backoff. The deeper failure is retry ownership at the wrong layer: the transport retried automatically, while the application layer — which had pagination and budget context — lost the ability to control behavior. The chosen mitigation is proactive pacing plus successful-response budget checks rather than reactive 429 recovery.",
+  "notes": "This receipt is strong because the problem is not simply missing backoff. The deeper failure is retry ownership at the wrong layer: the transport retried automatically, while the application layer \u2014 which had pagination and budget context \u2014 lost the ability to control behavior. The chosen mitigation is proactive pacing plus successful-response budget checks rather than reactive 429 recovery.",
   "tags": [
     "greenhouse",
     "429",
@@ -87,5 +87,6 @@
       "probe_strategy": "single_flight",
       "max_probe_qps": 0.1
     }
-  }
+  },
+  "signal_failure_type": "hidden"
 }

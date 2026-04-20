@@ -9,11 +9,13 @@
     "notes": "Discovered via pitstop-check@0.1.1 static scan. Related: Feb 2026 fix by RomneyDa for embedded 429 detection in Gemini/VertexAI."
   },
   "hazard": {
-    "class": ["rate_limit_429"],
-    "summary": "Exponential backoff utility collapses WAIT and CAP into single retry path — no Retry-After consultation, all 429s treated as retryable",
+    "class": [
+      "rate_limit_429"
+    ],
+    "summary": "Exponential backoff utility collapses WAIT and CAP into single retry path \u2014 no Retry-After consultation, all 429s treated as retryable",
     "signals": [
-      "core/util/withExponentialBackoff.ts:18 — All 429s treated as retryable",
-      "extensions/cli/src/util/exponentialBackoff.ts:51 — 429 handled without Retry-After",
+      "core/util/withExponentialBackoff.ts:18 \u2014 All 429s treated as retryable",
+      "extensions/cli/src/util/exponentialBackoff.ts:51 \u2014 429 handled without Retry-After",
       "Gemini 429 detection fixed upstream Feb 2026 but backoff layer unchanged"
     ]
   },
@@ -23,20 +25,39 @@
     "Retry loop must have max elapsed bound"
   ],
   "knobs": [
-    "retryAfterMs — read from response header before backoff calculation",
-    "maxElapsedMs — hard cap on total retry window",
-    "concurrencyCap — limit parallel retries under shared rate limit"
+    "retryAfterMs \u2014 read from response header before backoff calculation",
+    "maxElapsedMs \u2014 hard cap on total retry window",
+    "concurrencyCap \u2014 limit parallel retries under shared rate limit"
   ],
   "verification": [
-    "Run pitstop-check against core/util and extensions/cli/src/util — should return zero warnings",
+    "Run pitstop-check against core/util and extensions/cli/src/util \u2014 should return zero warnings",
     "Under concurrent load, verify 429 response with Retry-After header causes all workers to pause for header duration before retry",
     "Confirm CAP classification routes to concurrency reduction, not simple backoff"
   ],
-  "tags": ["rate_limit", "429", "retry", "ai-coding-assistant", "llm-provider"],
+  "tags": [
+    "rate_limit",
+    "429",
+    "retry",
+    "ai-coding-assistant",
+    "llm-provider"
+  ],
   "mitigation_signature": {
-    "hazards": ["rate_limit_429"],
-    "constraints": ["respect_retry_after", "cap_vs_wait_distinction"],
-    "knobs": ["retryAfterMs", "maxElapsedMs", "concurrencyCap"],
-    "anti_patterns": ["blanket_429_retry", "retry_after_ignored_under_concurrency"]
-  }
+    "hazards": [
+      "rate_limit_429"
+    ],
+    "constraints": [
+      "respect_retry_after",
+      "cap_vs_wait_distinction"
+    ],
+    "knobs": [
+      "retryAfterMs",
+      "maxElapsedMs",
+      "concurrencyCap"
+    ],
+    "anti_patterns": [
+      "blanket_429_retry",
+      "retry_after_ignored_under_concurrency"
+    ]
+  },
+  "signal_failure_type": "ignored"
 }

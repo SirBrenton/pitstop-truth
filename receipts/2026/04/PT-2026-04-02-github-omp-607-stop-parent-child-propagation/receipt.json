@@ -46,7 +46,7 @@
     "Verify retry-after value is visible in parent session state.",
     "Verify no retry loop is entered for retry-after values exceeding threshold."
   ],
-  "notes": "First receipt documenting STOP propagation failure in a parent/child multi-agent session. Previous receipts document STOP misclassification within a single retry loop. This case shows STOP classified correctly at the child level but not propagated upward — the parent has no visibility into child blocked state. Confirmed via real JSONL session logs from two parallel child agents. Both hit the same Anthropic account-level rate limit within 1 second of each other (timestamps 1775148765808 and 1775148765804), consistent with concurrent spawned agents sharing a single account quota pool. Subsequent maintainer testing suggested the visible false-liveness symptom may also interact with token reauthentication or other shared session state under multiple parallel sessions, but that mechanism was not yet confirmed at capture time.",
+  "notes": "First receipt documenting STOP propagation failure in a parent/child multi-agent session. Previous receipts document STOP misclassification within a single retry loop. This case shows STOP classified correctly at the child level but not propagated upward \u2014 the parent has no visibility into child blocked state. Confirmed via real JSONL session logs from two parallel child agents. Both hit the same Anthropic account-level rate limit within 1 second of each other (timestamps 1775148765808 and 1775148765804), consistent with concurrent spawned agents sharing a single account quota pool. Subsequent maintainer testing suggested the visible false-liveness symptom may also interact with token reauthentication or other shared session state under multiple parallel sessions, but that mechanism was not yet confirmed at capture time.",
   "tags": [
     "429",
     "stop",
@@ -63,7 +63,7 @@
       "retry_budget_exhausted"
     ],
     "constraints": [
-      "retry-after > threshold → STOP, not retryable",
+      "retry-after > threshold \u2192 STOP, not retryable",
       "child STOP must propagate to parent immediately",
       "parent must not appear in-progress when children are blocked"
     ],
@@ -91,5 +91,6 @@
       "probe_strategy": "single_flight",
       "max_probe_qps": 0.1
     }
-  }
+  },
+  "signal_failure_type": "hidden"
 }

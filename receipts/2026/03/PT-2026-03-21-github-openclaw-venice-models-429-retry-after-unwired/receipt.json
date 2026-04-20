@@ -10,12 +10,14 @@
     "notes": "Discovered via pitstop-check@0.1.1. The retry primitive in src/infra/retry.ts supports retryAfterMs correctly. Callers in src/agents/venice-models.ts and others do not pass retryAfterMs. When Venice API returns Retry-After: 600, client ignores it and retries on own schedule causing 10-minute timeout block."
   },
   "hazard": {
-    "class": ["rate_limit_429"],
-    "summary": "Correct retry primitive, unwired call sites — retryAfterMs supported but never passed by callers, causing Retry-After headers to be silently ignored under concurrency",
+    "class": [
+      "rate_limit_429"
+    ],
+    "summary": "Correct retry primitive, unwired call sites \u2014 retryAfterMs supported but never passed by callers, causing Retry-After headers to be silently ignored under concurrency",
     "signals": [
-      "src/agents/venice-models.ts:24 — 429 handled without Retry-After",
-      "src/agents/venice-models.ts:24 — All 429s treated as retryable — CAP vs WAIT not distinguished",
-      "Retry-After: 600 returned by Venice API — client retries immediately on own schedule",
+      "src/agents/venice-models.ts:24 \u2014 429 handled without Retry-After",
+      "src/agents/venice-models.ts:24 \u2014 All 429s treated as retryable \u2014 CAP vs WAIT not distinguished",
+      "Retry-After: 600 returned by Venice API \u2014 client retries immediately on own schedule",
       "10-minute timeout block reported in issue #49811",
       "pitstop-check flagged 22 issues across src/agents directory"
     ]
@@ -26,20 +28,41 @@
     "CAP (concurrency/quota limit) and WAIT (transient burst) must be distinguished at call site level"
   ],
   "knobs": [
-    "retryAfterMs — callback that reads Retry-After header from error response",
-    "maxElapsedMs — hard cap on total retry window",
-    "shouldRetry — per-call-site classification of retryable vs terminal errors"
+    "retryAfterMs \u2014 callback that reads Retry-After header from error response",
+    "maxElapsedMs \u2014 hard cap on total retry window",
+    "shouldRetry \u2014 per-call-site classification of retryable vs terminal errors"
   ],
   "verification": [
-    "Run pitstop-check against src/agents — should return zero warnings after wiring retryAfterMs at all call sites",
-    "Trigger Venice API rate limit — verify client waits exactly Retry-After duration before retrying",
+    "Run pitstop-check against src/agents \u2014 should return zero warnings after wiring retryAfterMs at all call sites",
+    "Trigger Venice API rate limit \u2014 verify client waits exactly Retry-After duration before retrying",
     "Confirm issue #49811 timeout block does not recur after fix"
   ],
-  "tags": ["rate_limit", "429", "retry", "openclaw", "ai-agent", "venice", "unwired-call-site"],
+  "tags": [
+    "rate_limit",
+    "429",
+    "retry",
+    "openclaw",
+    "ai-agent",
+    "venice",
+    "unwired-call-site"
+  ],
   "mitigation_signature": {
-    "hazards": ["rate_limit_429"],
-    "constraints": ["retry_after_ms_wired_at_call_sites", "cap_vs_wait_distinction"],
-    "knobs": ["retryAfterMs", "maxElapsedMs", "shouldRetry"],
-    "anti_patterns": ["correct_primitive_unwired_callers", "retry_after_ignored_under_concurrency"]
-  }
+    "hazards": [
+      "rate_limit_429"
+    ],
+    "constraints": [
+      "retry_after_ms_wired_at_call_sites",
+      "cap_vs_wait_distinction"
+    ],
+    "knobs": [
+      "retryAfterMs",
+      "maxElapsedMs",
+      "shouldRetry"
+    ],
+    "anti_patterns": [
+      "correct_primitive_unwired_callers",
+      "retry_after_ignored_under_concurrency"
+    ]
+  },
+  "signal_failure_type": "ignored"
 }

@@ -15,7 +15,7 @@
     "summary": "Anthropic long-context billing gate returns HTTP 429 with no Retry-After header and no time-bound signal. Message body is the only classification signal. Correct hazard class (quota_exhausted) was identified but enforcement action was scoped to the API credential instead of the billing gate, blocking all provider requests for 30 minutes including models unaffected by the long-context gate.",
     "signals": [
       "HTTP 429 with body: \"Extra usage is required for long context requests.\"",
-      "No Retry-After header present — confirmed by header extraction trace",
+      "No Retry-After header present \u2014 confirmed by header extraction trace",
       "No x-ratelimit-reset-requests or x-ratelimit-reset-tokens headers present",
       "Message body is the only distinguishing signal available",
       "Provider-wide credential backoff applied for 30 minutes",
@@ -23,9 +23,9 @@
     ]
   },
   "constraints": [
-    "Message body must be inspected when Retry-After is absent — status code alone is insufficient.",
-    "Billing gate errors must not trigger credential-scoped backoff — the gate is account-level, not credential-level.",
-    "Backoff scope must match the scope of the error condition: long-context gate → model/feature scope, not provider-wide credential scope.",
+    "Message body must be inspected when Retry-After is absent \u2014 status code alone is insufficient.",
+    "Billing gate errors must not trigger credential-scoped backoff \u2014 the gate is account-level, not credential-level.",
+    "Backoff scope must match the scope of the error condition: long-context gate \u2192 model/feature scope, not provider-wide credential scope.",
     "A quota_exhausted classification must not automatically inherit credential backoff behavior."
   ],
   "knobs": [
@@ -41,7 +41,7 @@
     "Verify Retry-After absence is handled without fallback to credential backoff.",
     "Verify message-body classification correctly identifies billing gate vs transient rate limit."
   ],
-  "notes": "This receipt documents two distinct failure shapes in one case: (1) message-only classification — the billing gate sends no Retry-After, making the error body the sole classification signal; (2) correct class, wrong enforcement scope — quota_exhausted was correctly identified but BACKOFF_QUOTA_EXHAUSTED_MS was applied to the API credential rather than the specific billing gate. The prior fix (PR #3257) corrected the error type from rate_limit to quota_exhausted but made the observable impact worse by extending backoff from 30 seconds to 30 minutes. Confirmed by author tracing header extraction path in anthropic-shared.js — retryAfterMs absent from persisted error entry. Eugenio91 forensic addendum (2026-04-03): A second compounding bug exists at the model selector layer. auto-model-selection.js builds modelsToTry starting from the configured primary on every unit dispatch, without checking provider backoff state. So even after the billing-gate backoff fires correctly, new auto-mode units keep reselecting the backed-off Anthropic provider. Additionally, agent-end-recovery.js may restore the autoModeStartModel even when that provider is currently backed off. The selector blindness and the enforcement scope bug compound each other — the system knows the provider is backed off but does not act on that knowledge at selection time. Fix confirmed at: auto-model-selection.js (skip backed-off candidates before pi.setModel), agent-end-recovery.js (normalize provider/model key, skip backed-off start model).",
+  "notes": "This receipt documents two distinct failure shapes in one case: (1) message-only classification \u2014 the billing gate sends no Retry-After, making the error body the sole classification signal; (2) correct class, wrong enforcement scope \u2014 quota_exhausted was correctly identified but BACKOFF_QUOTA_EXHAUSTED_MS was applied to the API credential rather than the specific billing gate. The prior fix (PR #3257) corrected the error type from rate_limit to quota_exhausted but made the observable impact worse by extending backoff from 30 seconds to 30 minutes. Confirmed by author tracing header extraction path in anthropic-shared.js \u2014 retryAfterMs absent from persisted error entry. Eugenio91 forensic addendum (2026-04-03): A second compounding bug exists at the model selector layer. auto-model-selection.js builds modelsToTry starting from the configured primary on every unit dispatch, without checking provider backoff state. So even after the billing-gate backoff fires correctly, new auto-mode units keep reselecting the backed-off Anthropic provider. Additionally, agent-end-recovery.js may restore the autoModeStartModel even when that provider is currently backed off. The selector blindness and the enforcement scope bug compound each other \u2014 the system knows the provider is backed off but does not act on that knowledge at selection time. Fix confirmed at: auto-model-selection.js (skip backed-off candidates before pi.setModel), agent-end-recovery.js (normalize provider/model key, skip backed-off start model).",
   "tags": [
     "429",
     "billing-gate",
@@ -85,5 +85,6 @@
       "probe_strategy": "single_flight",
       "max_probe_qps": 0.1
     }
-  }
+  },
+  "signal_failure_type": "missing"
 }
