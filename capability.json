@@ -1,12 +1,12 @@
 {
     "schema": "pitstop-capability.v0",
     "name": "pitstop-truth",
-    "version": "0.1.25",
+    "version": "0.1.26",
     "description": "Machine-readable corpus of AI/API execution failures and execution-shape anti-patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, concurrency amplification, mutation-density failures, shared-budget coordination failures, hidden retry-ownership failures, and hidden retry-visibility failures \u2014 classified, verified, and cross-referenced across production systems.",
     "capability": "execution_failure_classification",
     "thesis": "AI/API systems fail when execution constraints are misclassified, hidden, scoped incorrectly, or owned by the wrong layer. The recurring result is retry amplification, false liveness, blocked failover, and avoidable cost under shared constraints.",
     "corpus": {
-        "receipts": 43,
+        "receipts": 44,
         "hazard_classes": [
             "rate_limit_429",
             "timeout_deadline",
@@ -36,11 +36,12 @@
             "elastic/integrations",
             "getcompanion-ai/feynman",
             "cline/cline",
-            "Yeachan-Heo/oh-my-claudecode"
+            "Yeachan-Heo/oh-my-claudecode",
+            "CopilotKit/CopilotKit"
         ],
         "date_range": {
             "earliest": "2025-07-15",
-            "latest": "2026-04-20"
+            "latest": "2026-04-22"
         }
     },
     "query": {
@@ -409,6 +410,21 @@
             "fix": "When narrowing a detector, audit all actors that consume its output. Add matching guards to resume paths, state transitions, and any branch that acts on the detector result.",
             "note": "The invariant: the fix that narrows the detector must also narrow the actor. Two automated code reviewers approved an incomplete fix \u2014 the mismatch was subtle enough to pass automated review. Fastest fix-to-merge in the corpus: issue filed and merged within one hour.",
             "signal_failure_type": "ignored"
+        },
+        {
+            "id": "retry-after-overridden-by-transport-cap",
+            "hazard": "rate_limit_429",
+            "summary": "429 listed in retryableStatusCodes alongside 5xx. Retry-After header is read but overridden by maxDelayMs transport cap. Quota exhaustion with Retry-After: 10800 retries after 5 seconds until attempts exhausted.",
+            "classification": "Retry-After present but nullified by local policy",
+            "confirmed_in": [
+                "CopilotKit/CopilotKit",
+                "github/copilot-cli",
+                "activepieces/activepieces"
+            ],
+            "canonical_receipt": "PT-2026-04-22-github-copilotkit-3637-retry-after-overridden",
+            "fix": "Inspect Retry-After before applying any backoff. maxDelayMs must not override server-directed wait. Retry-After exceeding threshold must classify as STOP and surface immediately.",
+            "note": "Core runtime location in CopilotKit \u2014 every downstream consumer inherits this behavior. Fix in PR #3842 is correct for delay timing but does not implement WAIT vs STOP classification.",
+            "signal_failure_type": "overridden"
         }
     ],
     "detection": {
@@ -438,5 +454,5 @@
     },
     "contact": "brent@pitstop.dev",
     "license": "Apache-2.0",
-    "last_updated": "2026-04-20"
+    "last_updated": "2026-04-22"
 }
