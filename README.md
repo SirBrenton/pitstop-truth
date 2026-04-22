@@ -1,10 +1,15 @@
 # pitstop-truth
 
-Machine-readable “truth artifacts” (receipts) for reliability failures: rate limits, retries, timeouts, flaky CI.
+Machine-readable truth artifacts for reliability failures.
 
-Each receipt links to primary evidence and normalizes:
+Systems don’t fail because they lack retries.
+They fail because they act on signals they shouldn’t trust.
+
+This repo captures those failures as receipts:
 
 **hazard → constraints → knobs → verification**
+
+> Machine-readable does not mean decision-worthy.
 
 ## What this repo is for
 
@@ -68,6 +73,113 @@ Contains:
 - query URLs for index and schema
 
 Intended for agents and tools that need to understand what this corpus contains without parsing individual receipts.
+
+---
+
+## Signal Topology (why this exists)
+
+Most failures are not caused by missing retries.
+
+They are caused by systems making decisions on signals they should not trust.
+
+This repo now models:
+
+- where a signal originated
+- where it failed
+- which layer acted on it
+- what behavior resulted
+
+→ see Signal Topology below
+
+## Signal Topology (v0.1)
+
+Pitstop Truth receipts now optionally include a `signal_topology` field.
+
+This captures where a signal originated, where it failed, which layer made the decision, and what happened as a result.
+
+### Why this exists
+
+Most failures in AI/API systems are not caused by missing retries.
+
+They are caused by systems making decisions on signals they should not trust.
+
+Understanding failure requires more than what broke.
+
+It requires knowing where the signal broke.
+
+---
+
+### Schema
+
+```json
+"signal_topology": {
+  "signal_origin": "provider | transport | runtime | classifier | orchestrator | ui | unknown",
+  "failure_layer": "transport | runtime | classifier | orchestrator | ui | unknown",
+  "decision_layer": "retry_logic | router | failover | agent | user_interface | unknown",
+  "signal_failure_type": "missing | ignored | hidden | overridden",
+  "downstream_effect": "retry_loop | cost_burn | blocked_failover | silent_degradation | workflow_stall | false_terminal | false_unavailable | unknown"
+}
+```
+
+### Interpretation
+
+| Field               | Meaning                                              |
+|--------------------|------------------------------------------------------|
+| signal_origin       | Where the signal was first produced                  |
+| failure_layer       | Where the signal was lost or altered                 |
+| decision_layer      | Which layer acted on the signal                      |
+| signal_failure_type | How the signal failed                                |
+| downstream_effect   | What behavior resulted                               |
+
+### Example
+
+```json
+"signal_topology": {
+  "signal_origin": "provider",
+  "failure_layer": "runtime",
+  "decision_layer": "retry_logic",
+  "signal_failure_type": "overridden",
+  "downstream_effect": "retry_loop"
+}
+```
+---
+
+### Initial coverage
+
+Signal topology has been backfilled for a small set of high-signal receipts covering:
+
+- transport-layer failures (hidden retries, timeout conflicts)
+- runtime-layer failures (unexposed retries, missing signals)
+- classifier failures (semantic misclassification)
+- orchestrator failures (signal propagation gaps)
+
+This is intentionally partial.
+
+---
+
+### Design notes
+
+- signal_topology is optional
+- existing receipts remain valid
+- field is designed for consistency, not completeness
+- focus is on clear failure mapping, not exhaustive modeling
+
+---
+
+### Direction
+
+This is a first step toward modeling:
+
+signal integrity across layers
+
+Not just:
+- what failed
+
+But:
+- where the signal broke
+- why the system made the wrong decision
+
+
 
 ---
 
@@ -197,6 +309,8 @@ Schema: `schemas/receipt.v0.json`
 Schema enforcement:
 - `decision_event.v1` is validated via `jsonschema` during ingest (`pitstop_truth/ingest.py`).
 - `receipt.v0` is validated via `scripts/validate_receipts.py` (jsonschema across `receipts/**/receipt.json`).
+
+--- 
 
 Run locally:
 ```bash
