@@ -8,6 +8,13 @@
     "repo": "elastic/integrations",
     "issue_or_pr": 18339
   },
+  "signal_topology": {
+    "signal_origin": "provider",
+    "failure_layer": "transport",
+    "decision_layer": "retry_logic",
+    "signal_failure_type": "hidden",
+    "downstream_effect": "retry_loop"
+  },
   "hazard": {
     "class": [
       "rate_limit_429",

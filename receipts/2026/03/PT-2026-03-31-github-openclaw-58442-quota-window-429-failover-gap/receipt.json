@@ -8,6 +8,13 @@
     "repo": "openclaw/openclaw",
     "issue_or_pr": 58442
   },
+  "signal_topology": {
+    "signal_origin": "provider",
+    "failure_layer": "classifier",
+    "decision_layer": "failover",
+    "signal_failure_type": "ignored",
+    "downstream_effect": "blocked_failover"
+  },
   "hazard": {
     "class": [
       "rate_limit_429",

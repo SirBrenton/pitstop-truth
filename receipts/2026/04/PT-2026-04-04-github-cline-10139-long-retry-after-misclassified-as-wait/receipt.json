@@ -8,6 +8,13 @@
     "repo": "cline/cline",
     "issue_or_pr": 10139
   },
+  "signal_topology": {
+    "signal_origin": "provider",
+    "failure_layer": "classifier",
+    "decision_layer": "retry_logic",
+    "signal_failure_type": "ignored",
+    "downstream_effect": "retry_loop"
+  },
   "hazard": {
     "class": [
       "rate_limit_429",
