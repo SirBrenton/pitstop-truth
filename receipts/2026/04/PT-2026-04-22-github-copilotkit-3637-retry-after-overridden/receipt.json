@@ -9,6 +9,13 @@
     "repo": "CopilotKit/CopilotKit",
     "issue_or_pr": 3637
   },
+  "signal_topology": {
+    "signal_origin": "provider",
+    "failure_layer": "runtime",
+    "decision_layer": "retry_logic",
+    "signal_failure_type": "overridden",
+    "downstream_effect": "retry_loop"
+  },
   "hazard": {
     "class": ["rate_limit_429", "retry_budget_exhausted"],
     "summary": "429 listed in retryableStatusCodes alongside 502/503/504. All receive pure exponential backoff capped at maxDelayMs: 5000ms. Retry-After header is never read. A quota exhaustion 429 with Retry-After: 10800 (3 hours) retries after 5 seconds, hits the same wall, retries again, and exhausts all attempts — never surfacing the real condition.",

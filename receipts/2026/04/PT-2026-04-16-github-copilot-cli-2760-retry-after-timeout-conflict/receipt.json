@@ -8,6 +8,13 @@
     "repo": "github/copilot-cli",
     "issue_or_pr": 2760
   },
+  "signal_topology": {
+    "signal_origin": "provider",
+    "failure_layer": "transport",
+    "decision_layer": "retry_logic",
+    "signal_failure_type": "overridden",
+    "downstream_effect": "retry_loop"
+  },
   "hazard": {
     "class": [
       "rate_limit_429",

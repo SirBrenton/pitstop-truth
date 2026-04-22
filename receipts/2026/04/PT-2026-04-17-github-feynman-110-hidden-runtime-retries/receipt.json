@@ -8,6 +8,13 @@
     "repo": "getcompanion-ai/feynman",
     "issue_or_pr": 110
   },
+  "signal_topology": {
+    "signal_origin": "provider",
+    "failure_layer": "runtime",
+    "decision_layer": "agent",
+    "signal_failure_type": "hidden",
+    "downstream_effect": "silent_degradation"
+  },
   "hazard": {
     "class": [
       "rate_limit_429",

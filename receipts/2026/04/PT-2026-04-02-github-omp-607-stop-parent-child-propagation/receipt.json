@@ -8,6 +8,13 @@
     "repo": "can1357/oh-my-pi",
     "issue_or_pr": 607
   },
+  "signal_topology": {
+    "signal_origin": "provider",
+    "failure_layer": "orchestrator",
+    "decision_layer": "agent",
+    "signal_failure_type": "hidden",
+    "downstream_effect": "workflow_stall"
+  },
   "hazard": {
     "class": [
       "rate_limit_429",
