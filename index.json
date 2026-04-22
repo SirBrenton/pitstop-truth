@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-04-20T22:53:01Z",
+  "updated_at": "2026-04-22T14:58:34Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -870,6 +870,27 @@
         "confirmed_limited_state_forwarding"
       ],
       "path": "receipts/2026/04/PT-2026-04-20-github-oh-my-claudecode-2745-detector-actor-mismatch/receipt.json"
+    },
+    {
+      "id": "PT-2026-04-22-github-copilotkit-3637-retry-after-overridden",
+      "date": "2026-04-22",
+      "hazard_class": [
+        "rate_limit_429",
+        "retry_budget_exhausted"
+      ],
+      "source_url": "https://github.com/CopilotKit/CopilotKit/issues/3637",
+      "repo": "CopilotKit/CopilotKit",
+      "signals": [
+        "429 in retryableStatusCodes alongside 502/503/504",
+        "maxDelayMs: 5000 overrides Retry-After: 10800",
+        "quota exhaustion retried every 5 seconds until maxRetries exhausted"
+      ],
+      "knobs": [
+        "maxRetryAfterSeconds",
+        "retryableStatusCodes_separation",
+        "Retry-After_before_backoff"
+      ],
+      "path": "receipts/2026/04/PT-2026-04-22-github-copilotkit-3637-retry-after-overridden/receipt.json"
     }
   ]
 }

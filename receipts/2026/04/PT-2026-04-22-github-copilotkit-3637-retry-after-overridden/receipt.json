@@ -1,0 +1,87 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-04-22-github-copilotkit-3637-retry-after-overridden",
+  "created_at": "2026-04-22T00:00:00Z",
+  "signal_failure_type": "overridden",
+  "source": {
+    "url": "https://github.com/CopilotKit/CopilotKit/issues/3637",
+    "kind": "github_issue",
+    "repo": "CopilotKit/CopilotKit",
+    "issue_or_pr": 3637
+  },
+  "hazard": {
+    "class": ["rate_limit_429", "retry_budget_exhausted"],
+    "summary": "429 listed in retryableStatusCodes alongside 502/503/504. All receive pure exponential backoff capped at maxDelayMs: 5000ms. Retry-After header is never read. A quota exhaustion 429 with Retry-After: 10800 (3 hours) retries after 5 seconds, hits the same wall, retries again, and exhausts all attempts — never surfacing the real condition.",
+    "signals": [
+      "429 in retryableStatusCodes alongside 502/503/504",
+      "calculateDelay() applied to all retryable statuses identically",
+      "maxDelayMs: 5000 truncates Retry-After: 10800 to 5 seconds",
+      "Retry-After header never read in fetchWithRetry()",
+      "quota exhaustion retried every 5 seconds until maxRetries exhausted",
+      "real condition (3-hour quota exhaustion) never surfaced to caller"
+    ]
+  },
+  "constraints": [
+    "429 must not be listed alongside 5xx in a shared retryableStatusCodes array — taxonomy collapse guarantees misclassification.",
+    "Retry-After must be inspected before any backoff calculation is applied.",
+    "maxDelayMs must not override Retry-After — server-directed wait is authoritative.",
+    "Retry-After values exceeding a threshold must classify the response as STOP and surface immediately, not consume retry attempts.",
+    "The fix that parses Retry-After for delay timing does not constitute correct classification — WAIT vs STOP still requires explicit decisioning."
+  ],
+  "knobs": [
+    "maxRetryAfterSeconds (60s default in fix) — threshold for surfacing vs honoring",
+    "retryableStatusCodes — must not include 429 without separate handling path",
+    "calculateDelay() — must check for Retry-After before applying exponential backoff",
+    "maxDelayMs — must be subordinate to Retry-After, not override it"
+  ],
+  "verification": [
+    "Configure any LLM provider with quota-based limits",
+    "Exhaust quota — trigger 429 with Retry-After > 300s",
+    "Verify Retry-After is read before backoff is applied",
+    "Verify response is surfaced as quota exhaustion, not retried",
+    "Verify maxDelayMs does not truncate large Retry-After values"
+  ],
+  "notes": "Filed via static analysis (pitstop-scanner). Core runtime location: packages/runtime/src/util/retry-utils.ts. Fix merged in PR #3842 — 178 additions, 4 commits, tests added for Retry-After parsing and 429 branch. The fix is correct but incomplete: throw if Retry-After > 60s implements 'avoid hanging' not 'make correct decision.' WAIT vs STOP decisioning is still absent — the runtime does not distinguish transient throttle from quota exhaustion, only avoids blocking indefinitely. This is the same class as PT-2026-04-16 copilot-cli (signal_failure_type: overridden) but in a core AI agent runtime rather than a CLI transport layer. CopilotKit is developer-facing agent infrastructure — this failure propagates to every downstream consumer of the runtime.",
+  "tags": [
+    "429",
+    "retry-after",
+    "overridden",
+    "core-runtime",
+    "taxonomy-collapse",
+    "quota-exhaustion",
+    "agent-runtime"
+  ],
+  "mitigation_signature": {
+    "hazards": ["rate_limit_429", "retry_budget_exhausted"],
+    "constraints": [
+      "429 must not share retry path with 5xx",
+      "Retry-After is authoritative — maxDelayMs must not override it",
+      "STOP classification required when Retry-After exceeds threshold"
+    ],
+    "knobs": [
+      "maxRetryAfterSeconds",
+      "retryableStatusCodes separation",
+      "Retry-After parsing before backoff"
+    ],
+    "anti_patterns": [
+      "429 in shared retryableStatusCodes with 5xx",
+      "maxDelayMs capping server-directed Retry-After",
+      "exponential backoff applied before header inspection",
+      "quota exhaustion retried until attempts exhausted"
+    ]
+  },
+  "routing_impact": {
+    "default_action": "fail_fast",
+    "cooldown_source": "retry_after_header",
+    "cooldown_scope_key": "provider_quota",
+    "during_cooldown": {
+      "make_http_call": false,
+      "eligible_for_routing": false,
+      "emit_decision_event": true
+    },
+    "after_cooldown": {
+      "probe_strategy": "single_flight",
+      "max_probe_qps": 0.033
+    }
+  }
+}
