@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-04-23T04:15:44Z",
+  "updated_at": "2026-04-23T21:45:10Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -911,6 +911,26 @@
         "status code descriptions"
       ],
       "path": "receipts/2025/10/PT-2025-10-06-github-azul-openapi-429-undocumented/receipt.json"
+    },
+    {
+      "id": "PT-2026-04-23-github-adcp-2937-dashboard-429-ux-incoherence",
+      "date": "2026-04-23",
+      "hazard_class": [
+        "rate_limit_429"
+      ],
+      "source_url": "https://github.com/adcontextprotocol/adcp/issues/2937",
+      "repo": "adcontextprotocol/adcp",
+      "signals": [
+        "Second 429 could re-enable button while copy still said to wait",
+        "Retry-After-driven countdown missing on post-auto-retry path",
+        "Hardcoded fallback copy diverged from actual limiter state"
+      ],
+      "knobs": [
+        "Retry-After parsing on second response",
+        "button disable window",
+        "aria-live cadence"
+      ],
+      "path": "receipts/2026/04/PT-2026-04-23-github-adcp-2937-dashboard-429-ux-incoherence/receipt.json"
     }
   ]
 }

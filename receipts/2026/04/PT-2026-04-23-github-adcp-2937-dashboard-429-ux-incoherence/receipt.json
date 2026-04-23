@@ -1,0 +1,55 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-04-23-github-adcp-2937-dashboard-429-ux-incoherence",
+  "created_at": "2026-04-23T00:00:00Z",
+  "source": {
+    "url": "https://github.com/adcontextprotocol/adcp/issues/2937",
+    "kind": "github_issue",
+    "repo": "adcontextprotocol/adcp",
+    "issue_or_pr": 2937
+  },
+  "hazard": {
+    "class": ["rate_limit_429"],
+    "summary": "Post-auto-retry 429 state became incoherent: UI copy instructed the user to wait while button state, countdown behavior, and accessibility announcements were driven by different or missing retry signals.",
+    "signals": [
+      "Second 429 could re-enable button immediately while copy still said to wait",
+      "Post-auto-retry path lacked a fresh Retry-After-driven countdown",
+      "Fallback copy hardcoded 'a minute' instead of deriving from actual limiter state",
+      "Countdown and failure-state text were not announced correctly to assistive technology",
+      "Merged fix threaded second-response retryAfter, enforced button disable window, added aria-live behavior, and added parse tests"
+    ]
+  },
+  "constraints": [
+    "All user-visible 429 state must be derived from a single retry signal source",
+    "Button disabled state, copy, countdown, and auto-retry timing must remain consistent with one another",
+    "Fallback wait text must be explicitly approximate when not derived from server-provided retry metadata",
+    "User-facing retry state must remain accessible: assistive technology should receive coherent, throttled updates rather than per-tick noise",
+    "Second-response 429 handling must not reuse stale retry state from the first response"
+  ],
+  "knobs": [
+    "Retry-After / retryAfter parsing on second response",
+    "Fallback wait duration when no retry hint is available",
+    "Button disable window",
+    "Auto-retry timing",
+    "aria-live cadence",
+    "Countdown update throttle"
+  ],
+  "verification": [
+    "Trigger an initial 429 with auto-retry enabled",
+    "Ensure a second 429 with Retry-After produces a fresh countdown and keeps the button disabled for the full window",
+    "Ensure a second 429 without Retry-After falls back to ~60s messaging and still disables the button for that duration",
+    "Verify copy, disabled state, and countdown remain consistent throughout the wait window",
+    "Verify screen readers receive throttled status updates rather than every countdown tick",
+    "Verify final transition from waiting to retryable state is announced coherently"
+  ],
+  "notes": "This is a higher-order signal failure: the UI did not merely miss a 429 signal, it fractured it across multiple controls. Copy, button state, countdown, and accessibility messaging were no longer driven by the same underlying retry contract. The merged fix is strong evidence because it restores coherence across all four surfaces and adds explicit tests for Retry-After parsing and response/body consistency.",
+  "tags": [
+    "429",
+    "ui-layer",
+    "signal-incoherence",
+    "auto-retry",
+    "countdown",
+    "accessibility",
+    "retry-after"
+  ]
+}
