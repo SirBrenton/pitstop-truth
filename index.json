@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-04-22T14:58:34Z",
+  "updated_at": "2026-04-23T04:15:44Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -891,6 +891,26 @@
         "Retry-After_before_backoff"
       ],
       "path": "receipts/2026/04/PT-2026-04-22-github-copilotkit-3637-retry-after-overridden/receipt.json"
+    },
+    {
+      "id": "PT-2025-10-06-github-azul-openapi-429-undocumented",
+      "date": "2025-10-06",
+      "hazard_class": [
+        "rate_limit_429"
+      ],
+      "source_url": "https://github.com/DataBiosphere/azul/issues/7469",
+      "repo": "DataBiosphere/azul",
+      "signals": [
+        "OpenAPI spec documented 504 but not 429",
+        "Retry-After semantics discussed after the fact",
+        "429 contract missing from spec"
+      ],
+      "knobs": [
+        "OpenAPI response definitions",
+        "Retry-After header documentation",
+        "status code descriptions"
+      ],
+      "path": "receipts/2025/10/PT-2025-10-06-github-azul-openapi-429-undocumented/receipt.json"
     }
   ]
 }
