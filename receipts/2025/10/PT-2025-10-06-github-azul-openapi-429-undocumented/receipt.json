@@ -1,0 +1,56 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2025-10-06-github-azul-openapi-429-undocumented",
+  "created_at": "2025-10-06T00:00:00Z",
+  "signal_failure_type": "missing",
+  "source": {
+    "url": "https://github.com/DataBiosphere/azul/issues/7469",
+    "kind": "github_issue",
+    "repo": "DataBiosphere/azul",
+    "issue_or_pr": 7469
+  },
+  "signal_topology": {
+    "signal_origin": "provider",
+    "failure_layer": "unknown",
+    "decision_layer": "unknown",
+    "signal_failure_type": "missing",
+    "downstream_effect": "unknown"
+  },
+  "hazard": {
+    "class": ["rate_limit_429"],
+    "summary": "429 responses and Retry-After retry semantics were not declared in the OpenAPI specification, leaving clients without a formal contract for correct rate-limit handling.",
+    "signals": [
+      "OpenAPI spec documented 504 but not 429",
+      "Issue discussion explicitly proposes documenting 429 responses",
+      "Follow-up discussion specifies Retry-After-based client behavior for 429",
+      "Spec changes were required to align declared behavior with actual retry semantics"
+    ]
+  },
+  "constraints": [
+    "All runtime error signals that affect client behavior must be declared in the API contract",
+    "Retry semantics must be specified alongside retryable response codes",
+    "OpenAPI specs must reflect actual runtime behavior, not partial or outdated behavior",
+    "Clients should not be forced to infer retry behavior from undocumented responses"
+  ],
+  "knobs": [
+    "OpenAPI response definitions",
+    "Retry-After header documentation",
+    "status code descriptions",
+    "client SDK generation behavior"
+  ],
+  "verification": [
+    "Inspect the OpenAPI spec and confirm 429 is documented",
+    "Confirm Retry-After semantics are described for 429 responses",
+    "Verify generated or downstream clients have enough contract information to implement correct retry behavior",
+    "Confirm response code descriptions align with actual runtime behavior"
+  ],
+  "notes": "This is a contract-level signal omission. The issue is not that the runtime necessarily failed to emit a 429, but that the formal API contract failed to declare a response and retry signal that clients need in order to behave correctly. The issue discussion and follow-up PRs make the retry contract explicit after the fact, which is exactly the failure: the signal existed operationally but was missing from the declared interface.",
+  "tags": [
+    "429",
+    "openapi",
+    "contract-layer",
+    "signal-omission",
+    "api-spec",
+    "retry-semantics"
+  ]
+}
