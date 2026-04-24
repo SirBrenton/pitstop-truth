@@ -1,0 +1,61 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-04-23-github-kiro-7212-credit-limit-retried-as-throttle",
+  "created_at": "2026-04-23T00:00:00Z",
+  "source": {
+    "url": "https://github.com/kirodotdev/Kiro/issues/7212",
+    "kind": "github_issue",
+    "repo": "kirodotdev/Kiro",
+    "issue_or_pr": 7212
+  },
+  "signal_topology": {
+    "signal_origin": "provider",
+    "failure_layer": "classifier",
+    "decision_layer": "retry_logic",
+    "signal_failure_type": "ignored",
+    "downstream_effect": "workflow_stall"
+  },
+  "hazard": {
+    "class": ["rate_limit_429"],
+    "summary": "Quota or credit window exhaustion is surfaced as a throttling error but still enters a short retry loop, causing repeated retries despite no possibility of success until reset.",
+    "signals": [
+      "Too many requests, please wait before trying again",
+      "ThrottlingException",
+      "60-minute credit limit exceeded",
+      "Retry #2 within 10.0s",
+      "Retry #3 within 10.0s",
+      "user reports: cannot work"
+    ]
+  },
+  "constraints": [
+    "Quota or credit exhaustion must not enter short retry loops",
+    "Terminal conditions must be surfaced to the user with reset semantics",
+    "Retry behavior must distinguish between transient throttling and quota exhaustion",
+    "Retry-after windows exceeding execution horizon must terminate the run"
+  ],
+  "knobs": [
+    "retry_delay_seconds",
+    "max_retries",
+    "max_elapsed_ms",
+    "quota_detection_rules",
+    "error message classification",
+    "retry-after threshold"
+  ],
+  "verification": [
+    "Trigger a credit or quota exhaustion condition and observe system behavior",
+    "Verify system does not retry within short intervals (e.g. 10s)",
+    "Confirm terminal condition is surfaced with correct reset window",
+    "Ensure retry loop terminates instead of stalling execution",
+    "Validate user-facing state reflects blocked condition instead of active retry"
+  ],
+  "notes": "The system receives a clear provider signal indicating a 60-minute credit limit exhaustion, but continues retrying at short intervals as if the condition were transient throttling. This creates a false liveness state where execution appears active but cannot make progress. The failure is not absence of retry logic, but incorrect classification of a terminal condition as retryable.",
+  "tags": [
+    "429",
+    "quota-exhaustion",
+    "retry-loop",
+    "false-liveness",
+    "classification-failure",
+    "throttling"
+  ],
+  "signal_failure_type": "ignored"
+}

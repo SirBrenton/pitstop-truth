@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-04-23T21:45:10Z",
+  "updated_at": "2026-04-24T03:36:00Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -931,6 +931,28 @@
         "aria-live cadence"
       ],
       "path": "receipts/2026/04/PT-2026-04-23-github-adcp-2937-dashboard-429-ux-incoherence/receipt.json"
+    },
+    {
+      "id": "PT-2026-04-23-github-kiro-7212-credit-limit-retried-as-throttle",
+      "date": "2026-04-23",
+      "hazard_class": [
+        "rate_limit_429"
+      ],
+      "source_url": "https://github.com/kirodotdev/Kiro/issues/7212",
+      "repo": "kirodotdev/Kiro",
+      "signals": [
+        "ThrottlingException",
+        "60-minute credit limit exceeded",
+        "Retry #2 within 10.0s",
+        "Retry #3 within 10.0s"
+      ],
+      "knobs": [
+        "retry_delay_seconds",
+        "max_retries",
+        "quota_detection_rules",
+        "retry-after threshold"
+      ],
+      "path": "receipts/2026/04/PT-2026-04-23-github-kiro-7212-credit-limit-retried-as-throttle/receipt.json"
     }
   ]
 }
