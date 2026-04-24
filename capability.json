@@ -1,12 +1,12 @@
 {
     "schema": "pitstop-capability.v0",
     "name": "pitstop-truth",
-    "version": "0.1.30",
+    "version": "0.1.31",
     "description": "Machine-readable corpus of AI/API execution failures and execution-shape anti-patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, concurrency amplification, mutation-density failures, shared-budget coordination failures, hidden retry-ownership failures, and hidden retry-visibility failures \u2014 classified, verified, and cross-referenced across production systems.",
     "capability": "execution_failure_classification",
     "thesis": "AI/API systems fail when execution signals or constraints are misclassified, hidden, omitted, scoped incorrectly, or owned by the wrong layer. The recurring result is retry amplification, false liveness, blocked failover, undefined client behavior, and avoidable cost under shared constraints.",
     "corpus": {
-        "receipts": 48,
+        "receipts": 49,
         "hazard_classes": [
             "rate_limit_429",
             "timeout_deadline",
@@ -41,7 +41,8 @@
             "DataBiosphere/azul",
             "adcontextprotocol/adcp",
             "kirodotdev/Kiro",
-            "logfwd/logfwd"
+            "logfwd/logfwd",
+            "lizhelang/codexbar"
         ],
         "date_range": {
             "earliest": "2025-07-15",
@@ -442,6 +443,17 @@
             "fix": "Inspect Retry-After before applying any backoff. maxDelayMs must not override server-directed wait. Retry-After exceeding threshold must classify as STOP and surface immediately.",
             "note": "Core runtime location in CopilotKit \u2014 every downstream consumer inherits this behavior. Fix in PR #3842 is correct for delay timing but does not implement WAIT vs STOP classification.",
             "signal_failure_type": "overridden"
+        },
+        {
+            "id": "ambiguous-signal-escalated-to-broad-enforcement",
+            "hazard": "rate_limit_429",
+            "summary": "Ambiguous or incomplete rate-limit signals are escalated via fallback logic into broader enforcement scopes (e.g. account-level blocking), removing healthy capacity and producing false unavailability.",
+            "classification": "Uncertain signal promoted to definitive STOP at wrong scope",
+            "confirmed_in": [
+                "lizhelang/codexbar"
+            ],
+            "canonical_receipt": "PT-2026-04-23-github-codexbar-11-ambiguous-signal-account-block",
+            "fix": "Do not escalate ambiguous signals. Gate scope escalation behind explicit quota exhaustion signals. Preserve routing eligibility when signal certainty is low."
         }
     ],
     "detection": {
