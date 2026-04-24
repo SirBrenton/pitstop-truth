@@ -1,12 +1,12 @@
 {
     "schema": "pitstop-capability.v0",
     "name": "pitstop-truth",
-    "version": "0.1.28",
+    "version": "0.1.29",
     "description": "Machine-readable corpus of AI/API execution failures and execution-shape anti-patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, concurrency amplification, mutation-density failures, shared-budget coordination failures, hidden retry-ownership failures, and hidden retry-visibility failures \u2014 classified, verified, and cross-referenced across production systems.",
     "capability": "execution_failure_classification",
     "thesis": "AI/API systems fail when execution signals or constraints are misclassified, hidden, omitted, scoped incorrectly, or owned by the wrong layer. The recurring result is retry amplification, false liveness, blocked failover, undefined client behavior, and avoidable cost under shared constraints.",
     "corpus": {
-        "receipts": 46,
+        "receipts": 47,
         "hazard_classes": [
             "rate_limit_429",
             "timeout_deadline",
@@ -39,7 +39,8 @@
             "Yeachan-Heo/oh-my-claudecode",
             "CopilotKit/CopilotKit",
             "DataBiosphere/azul",
-            "adcontextprotocol/adcp"
+            "adcontextprotocol/adcp",
+            "kirodotdev/Kiro"
         ],
         "date_range": {
             "earliest": "2025-07-15",
