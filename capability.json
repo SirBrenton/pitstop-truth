@@ -1,12 +1,12 @@
 {
     "schema": "pitstop-capability.v0",
     "name": "pitstop-truth",
-    "version": "0.1.29",
+    "version": "0.1.30",
     "description": "Machine-readable corpus of AI/API execution failures and execution-shape anti-patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, concurrency amplification, mutation-density failures, shared-budget coordination failures, hidden retry-ownership failures, and hidden retry-visibility failures \u2014 classified, verified, and cross-referenced across production systems.",
     "capability": "execution_failure_classification",
     "thesis": "AI/API systems fail when execution signals or constraints are misclassified, hidden, omitted, scoped incorrectly, or owned by the wrong layer. The recurring result is retry amplification, false liveness, blocked failover, undefined client behavior, and avoidable cost under shared constraints.",
     "corpus": {
-        "receipts": 47,
+        "receipts": 48,
         "hazard_classes": [
             "rate_limit_429",
             "timeout_deadline",
@@ -40,7 +40,8 @@
             "CopilotKit/CopilotKit",
             "DataBiosphere/azul",
             "adcontextprotocol/adcp",
-            "kirodotdev/Kiro"
+            "kirodotdev/Kiro",
+            "logfwd/logfwd"
         ],
         "date_range": {
             "earliest": "2025-07-15",
@@ -281,6 +282,19 @@
             "canonical_receipt": "PT-2026-04-10-github-openclaw-57403-webhook-ack-duplicate-redelivery",
             "fix": "Preserve the upstream protocol boundary first: ACK immediately or decouple model execution from webhook delivery. Dedupe redeliveries by delivery identifier, and ensure fallback timing cannot exceed the protocol timeout budget.",
             "note": "This pattern is stronger than a simple 429 or fallback bug. The reusable lesson is that throttled model execution can escape the model layer and become a protocol-level duplicate delivery loop when ACK semantics are coupled to synchronous AI latency."
+        },
+        {
+            "id": "delivery-contract-fragmentation-liveness-failure",
+            "hazard": "retry_budget_exhausted",
+            "summary": "Retryable delivery outcomes are translated across sink, worker, checkpoint, and pipeline layers without a single terminal boundary. Local retry behavior remains plausible, but globally the pipeline can stall indefinitely because retry, hold, reject, and checkpoint advancement are not governed by one explicit delivery contract.",
+            "classification": "Unbounded WAIT path — retryable local failure becomes global liveness failure",
+            "confirmed_in": [
+                "logfwd/logfwd"
+            ],
+            "canonical_receipt": "PT-2026-04-23-github-logfwd-1312-delivery-contract-liveness",
+            "fix": "Define a single delivery contract across SendResult, DeliveryOutcome, TicketDisposition, and checkpoint advancement. Add explicit retry budgets such as max_retries or max_elapsed, and ensure Hold states have a requeue, recovery, or operator-visible terminal path.",
+            "note": "This pattern is not 429-specific. It shows that even mature systems with typestate, Kani proofs, TLA+ specs, and explicit outcome enums can still suffer execution-level liveness failure when retry semantics are fragmented across layers.",
+            "signal_failure_type": "hidden"
         },
         {
             "id": "shared-upstream-fetch-without-auth-or-cache",
