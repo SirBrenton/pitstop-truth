@@ -1,0 +1,64 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-04-23-github-logfwd-1312-delivery-contract-liveness",
+  "created_at": "2026-04-23T00:00:00Z",
+  "source": {
+    "url": "https://github.com/logfwd/logfwd/issues/1312",
+    "kind": "github_issue",
+    "repo": "logfwd/logfwd",
+    "issue_or_pr": 1312
+  },
+  "signal_topology": {
+    "signal_origin": "runtime",
+    "failure_layer": "orchestrator",
+    "decision_layer": "retry_logic",
+    "signal_failure_type": "hidden",
+    "downstream_effect": "workflow_stall"
+  },
+  "hazard": {
+    "class": ["retry_budget_exhausted"],
+    "summary": "Retryable delivery outcomes lack a terminal boundary across sink, worker, checkpoint, and pipeline layers, allowing indefinite retry paths to become pipeline-level liveness failures.",
+    "signals": [
+      "Infinite exponential backoff via worker retry loop",
+      "No bounded retry count",
+      "IoError retries forever at capped interval",
+      "RetryExhausted / TimedOut / InternalFailure map to Hold",
+      "Hold freezes checkpoint advancement",
+      "Delivery semantics spread across SendResult, DeliveryOutcome, TicketDisposition, and checkpoint policy"
+    ]
+  },
+  "constraints": [
+    "All retryable paths must have a terminal boundary such as max_retries or max_elapsed",
+    "Delivery outcome semantics must be explicit across sink, worker, checkpoint, and pipeline layers",
+    "A retryable local failure must not create indefinite global pipeline liveness failure",
+    "Checkpoint Hold states must have an explicit requeue, recovery, or operator-visible terminal path",
+    "Retry, reject, hold, and checkpoint advancement must be part of one delivery contract"
+  ],
+  "knobs": [
+    "max_retries",
+    "max_elapsed_ms",
+    "per_batch_timeout",
+    "retry_backoff_cap",
+    "delivery_guarantee",
+    "hold_requeue_buffer_size",
+    "dead_letter_queue_enabled"
+  ],
+  "verification": [
+    "Inject a persistently failing sink or endpoint",
+    "Verify retry path terminates after configured retry budget",
+    "Verify RetryExhausted maps to an explicit Hold or terminal operator-visible state",
+    "Verify checkpoint advancement behavior is consistent with delivery guarantee",
+    "Verify held tickets are requeued, persisted, or surfaced instead of silently stalling in-process",
+    "Verify delivery outcome mappings are covered by table-driven contract tests"
+  ],
+  "notes": "This is a strong general execution-contract receipt, not a 429-specific case. The issue documents a mature system with typestate, Kani proofs, TLA+ specs, and explicit outcome enums, yet retry/hold/reject semantics remain fragmented across layers. The reusable lesson is that component-level correctness does not guarantee execution-level liveness: retryable paths need terminal boundaries and a unified delivery contract.",
+  "tags": [
+    "retry-budget",
+    "liveness",
+    "delivery-contract",
+    "checkpoint",
+    "hold",
+    "fanout",
+    "execution-semantics"
+  ]
+}

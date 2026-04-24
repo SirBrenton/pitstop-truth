@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-04-24T03:36:00Z",
+  "updated_at": "2026-04-24T05:51:27Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -953,6 +953,28 @@
         "retry-after threshold"
       ],
       "path": "receipts/2026/04/PT-2026-04-23-github-kiro-7212-credit-limit-retried-as-throttle/receipt.json"
+    },
+    {
+      "id": "PT-2026-04-23-github-logfwd-1312-delivery-contract-liveness",
+      "date": "2026-04-23",
+      "hazard_class": [
+        "retry_budget_exhausted"
+      ],
+      "source_url": "https://github.com/logfwd/logfwd/issues/1312",
+      "repo": "logfwd/logfwd",
+      "signals": [
+        "Infinite exponential backoff via worker retry loop",
+        "No bounded retry count",
+        "Hold freezes checkpoint advancement",
+        "Delivery semantics spread across SendResult, DeliveryOutcome, TicketDisposition"
+      ],
+      "knobs": [
+        "max_retries",
+        "max_elapsed_ms",
+        "delivery_guarantee",
+        "hold_requeue_buffer_size"
+      ],
+      "path": "receipts/2026/04/PT-2026-04-23-github-logfwd-1312-delivery-contract-liveness/receipt.json"
     }
   ]
 }
