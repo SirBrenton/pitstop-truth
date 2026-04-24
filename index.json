@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-04-24T05:51:27Z",
+  "updated_at": "2026-04-24T06:20:39Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -975,6 +975,28 @@
         "hold_requeue_buffer_size"
       ],
       "path": "receipts/2026/04/PT-2026-04-23-github-logfwd-1312-delivery-contract-liveness/receipt.json"
+    },
+    {
+      "id": "PT-2026-04-23-github-codexbar-11-ambiguous-signal-account-block",
+      "date": "2026-04-23",
+      "hazard_class": [
+        "rate_limit_429"
+      ],
+      "source_url": "https://github.com/lizhelang/codexbar/issues/11",
+      "repo": "lizhelang/codexbar",
+      "signals": [
+        "in-band usage signal without retryAt",
+        "fallback to availabilityResetAt",
+        "no routable OpenAI account 503",
+        "accounts blocked despite available quota"
+      ],
+      "knobs": [
+        "runtime_block_duration",
+        "availabilityResetAt fallback",
+        "quotaExhausted gate",
+        "routing candidate eligibility"
+      ],
+      "path": "receipts/2026/04/PT-2026-04-23-github-codexbar-11-ambiguous-signal-account-block/receipt.json"
     }
   ]
 }

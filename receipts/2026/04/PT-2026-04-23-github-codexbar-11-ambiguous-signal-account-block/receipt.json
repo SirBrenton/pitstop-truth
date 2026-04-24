@@ -1,0 +1,65 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-04-23-github-codexbar-11-ambiguous-signal-account-block",
+  "created_at": "2026-04-23T00:00:00Z",
+  "source": {
+    "url": "https://github.com/lizhelang/codexbar/issues/11",
+    "kind": "github_issue",
+    "repo": "lizhelang/codexbar",
+    "issue_or_pr": 11
+  },
+  "signal_topology": {
+    "signal_origin": "provider",
+    "failure_layer": "runtime",
+    "decision_layer": "router",
+    "signal_failure_type": "overridden",
+    "downstream_effect": "false_unavailable"
+  },
+  "hazard": {
+    "class": ["rate_limit_429"],
+    "summary": "Ambiguous in-band rate-limit signals without an explicit retry time were escalated into account-level runtime blocks using availability reset time, removing otherwise healthy accounts from routing and producing immediate 503 no-routable-account failures.",
+    "signals": [
+      "in-band usage/rate-limit signal without parseable retryAt",
+      "fallback to availabilityResetAt",
+      "accounts with remaining quota blocked for several hours",
+      "aggregate gateway unavailable: no routable OpenAI account",
+      "all routing candidates removed despite accounts showing available quota",
+      "maintainer fix restricted reset-time fallback to quotaExhausted cases"
+    ]
+  },
+  "constraints": [
+    "Ambiguous rate-limit signals must not escalate to account-level blocking",
+    "Reset-time fallback must only be used when quota exhaustion is explicitly confirmed",
+    "Fallback logic must preserve routing eligibility for accounts that still have usable quota",
+    "Router decisions must distinguish uncertain in-band pressure from definitive quota exhaustion",
+    "Runtime block scope must match the certainty and scope of the underlying signal"
+  ],
+  "knobs": [
+    "runtime_block_duration",
+    "availabilityResetAt fallback",
+    "quotaExhausted gate",
+    "default ambiguous-signal cooldown",
+    "routing candidate eligibility",
+    "accountUsageMode aggregate_gateway"
+  ],
+  "verification": [
+    "Simulate an in-band rate-limit signal with no parseable retryAt on an account that still has quota",
+    "Verify the account is not blocked until availabilityResetAt",
+    "Verify ambiguous signals fall back to a bounded default cooldown",
+    "Verify confirmed quotaExhausted accounts still use reset-time semantics",
+    "Verify routing candidates are not emptied when accounts remain usable",
+    "Verify no immediate 503 no-routable-account response occurs solely from ambiguous in-band signals"
+  ],
+  "notes": "This is a signal-to-scope mismatch. The runtime treated an ambiguous in-band rate or usage signal as if it definitively proved account-level quota exhaustion, then used availabilityResetAt to block accounts for hours. The maintainer fix restricted reset-time fallback to confirmed quotaExhausted cases and preserved shorter fallback behavior for ambiguous non-exhausted signals. The reusable lesson is that fallback logic must not promote uncertain signals into broad enforcement actions.",
+  "tags": [
+    "429",
+    "rate-limit",
+    "ambiguous-signal",
+    "routing",
+    "account-block",
+    "false-unavailable",
+    "aggregate-gateway",
+    "scope-mismatch"
+  ],
+  "signal_failure_type": "overridden"
+}
