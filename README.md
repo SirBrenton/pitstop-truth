@@ -187,8 +187,6 @@ But:
 - where the signal broke
 - why the system made the wrong decision
 
-
-
 ---
 
 ## Two layers of receipts
