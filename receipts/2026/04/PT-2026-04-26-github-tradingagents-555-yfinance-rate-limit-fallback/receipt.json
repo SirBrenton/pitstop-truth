@@ -1,0 +1,89 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-04-26-github-tradingagents-555-yfinance-rate-limit-fallback",
+  "created_at": "2026-04-26T00:00:00Z",
+  "source": {
+    "url": "https://github.com/TauricResearch/TradingAgents/issues/555",
+    "kind": "github_issue",
+    "repo": "TauricResearch/TradingAgents",
+    "issue_or_pr": 555
+  },
+  "signal_topology": {
+    "signal_origin": "provider",
+    "failure_layer": "runtime",
+    "decision_layer": "failover",
+    "signal_failure_type": "ignored",
+    "downstream_effect": "workflow_stall"
+  },
+  "hazard": {
+    "class": ["rate_limit_429"],
+    "summary": "YFinance rate-limit errors propagated through the agent tool path and stalled analysis because rate-limit signals were not consistently preserved into vendor fallback logic.",
+    "signals": [
+      "YFRateLimitError: Too Many Requests. Rate limited. Try after a while.",
+      "yfinance raises YFRateLimitError when response.status_code == 429",
+      "route_to_vendor fallback originally caught AlphaVantageRateLimitError but not YFRateLimitError",
+      "LangGraph tool execution surfaced the rate-limit exception during tools_market task",
+      "fix added retry/backoff, TTL caching, and vendor fallback handling for YFRateLimitError"
+    ]
+  },
+  "constraints": [
+    "Rate-limit exceptions from vendor adapters must propagate to the routing layer before generic exception handling",
+    "Vendor fallback logic must recognize equivalent rate-limit signals across providers",
+    "Repeated provider calls under rate limit must be bounded by retry/backoff and cache policy",
+    "Agent workflows must treat provider rate limits as recoverable routing events, not unhandled tool crashes"
+  ],
+  "knobs": [
+    "yfinance_retry_policy",
+    "cache_ttl",
+    "vendor_fallback_error_classes",
+    "backoff_delay",
+    "max_retries",
+    "rate_limit_exception_propagation"
+  ],
+  "verification": [
+    "Simulate yfinance raising YFRateLimitError from a market data call",
+    "Verify retry/backoff is applied before failure is surfaced",
+    "Verify cached yfinance responses avoid repeated provider calls within TTL",
+    "Verify route_to_vendor catches YFRateLimitError and attempts configured fallback vendors",
+    "Verify generic exception handlers do not swallow rate-limit exceptions before fallback logic can act"
+  ],
+  "notes": "This is not merely a missing retry bug. The deeper failure is that a provider-specific rate-limit signal did not consistently reach the routing/fallback layer. The fix combines backoff, TTL caching, and explicit propagation of YFRateLimitError into vendor fallback handling.",
+  "tags": [
+    "yfinance",
+    "trading-agents",
+    "langgraph",
+    "vendor-fallback",
+    "rate-limit",
+    "ttl-cache",
+    "agent-workflow",
+    "market-data"
+  ],
+  "signal_failure_type": "ignored",
+  "mitigation_signature": {
+    "hazards": [
+      "rate_limit_429",
+      "vendor_rate_limit_not_routed_to_fallback",
+      "provider_pressure_amplified_by_uncached_calls"
+    ],
+    "constraints": [
+      "vendor rate-limit errors must reach fallback logic",
+      "cache policy must reduce repeated calls during provider pressure",
+      "rate-limit exceptions must not be swallowed by broad handlers"
+    ],
+    "knobs": [
+      "retry_policy",
+      "cache_ttl",
+      "fallback_error_class_map",
+      "backoff_schedule"
+    ],
+    "anti_patterns": [
+      "provider-specific rate-limit exception not included in fallback handling",
+      "uncached repeated calls during rate limit",
+      "agent workflow crashes instead of routing around provider pressure"
+    ]
+  },
+  "routing_impact": {
+    "default_action": "retry_with_budget",
+    "cooldown_source": "none"
+  }
+}
