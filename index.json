@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-04-26T04:22:10Z",
+  "updated_at": "2026-04-26T17:37:06Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -1017,6 +1017,26 @@
         "agent_tool_error_format"
       ],
       "path": "receipts/2026/04/PT-2026-04-25-github-go-github-4180-retryafter-string-boundary/receipt.json"
+    },
+    {
+      "id": "PT-2026-04-26-github-tradingagents-555-yfinance-rate-limit-fallback",
+      "date": "2026-04-26",
+      "hazard_class": [
+        "rate_limit_429"
+      ],
+      "source_url": "https://github.com/TauricResearch/TradingAgents/issues/555",
+      "repo": "TauricResearch/TradingAgents",
+      "signals": [
+        "YFRateLimitError: Too Many Requests. Rate limited. Try after a while.",
+        "route_to_vendor fallback originally caught AlphaVantageRateLimitError but not YFRateLimitError",
+        "fix added retry/backoff, TTL caching, and vendor fallback handling for YFRateLimitError"
+      ],
+      "knobs": [
+        "yfinance_retry_policy",
+        "cache_ttl",
+        "vendor_fallback_error_classes"
+      ],
+      "path": "receipts/2026/04/PT-2026-04-26-github-tradingagents-555-yfinance-rate-limit-fallback/receipt.json"
     }
   ]
 }
