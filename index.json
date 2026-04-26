@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-04-24T06:20:39Z",
+  "updated_at": "2026-04-26T04:22:10Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -997,6 +997,26 @@
         "routing candidate eligibility"
       ],
       "path": "receipts/2026/04/PT-2026-04-23-github-codexbar-11-ambiguous-signal-account-block/receipt.json"
+    },
+    {
+      "id": "PT-2026-04-25-github-go-github-4180-retryafter-string-boundary",
+      "date": "2026-04-25",
+      "hazard_class": [
+        "rate_limit_429"
+      ],
+      "source_url": "https://github.com/google/go-github/issues/4180",
+      "repo": "google/go-github",
+      "signals": [
+        "AbuseRateLimitError.RetryAfter populated from Retry-After header",
+        "AbuseRateLimitError.Error() omits RetryAfter duration",
+        "AI agents receive MCP tool errors as plain strings"
+      ],
+      "knobs": [
+        "error_string_includes_retry_after",
+        "structured_error_propagation",
+        "agent_tool_error_format"
+      ],
+      "path": "receipts/2026/04/PT-2026-04-25-github-go-github-4180-retryafter-string-boundary/receipt.json"
     }
   ]
 }

@@ -1,0 +1,89 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-04-25-github-go-github-4180-retryafter-string-boundary",
+  "created_at": "2026-04-25T00:00:00Z",
+  "source": {
+    "url": "https://github.com/google/go-github/issues/4180",
+    "kind": "github_issue",
+    "repo": "google/go-github",
+    "issue_or_pr": 4180
+  },
+  "signal_topology": {
+    "signal_origin": "provider",
+    "failure_layer": "runtime",
+    "decision_layer": "agent",
+    "signal_failure_type": "hidden",
+    "downstream_effect": "retry_loop"
+  },
+  "hazard": {
+    "class": ["rate_limit_429"],
+    "summary": "Retry-After is parsed into a typed AbuseRateLimitError field but omitted from the stringified error surface, hiding retry timing from logs, MCP tools, and AI agents that only consume error text.",
+    "signals": [
+      "AbuseRateLimitError.RetryAfter populated from Retry-After header",
+      "AbuseRateLimitError.Error() omits RetryAfter duration",
+      "AI agents receive MCP tool errors as plain strings",
+      "agent cannot inspect underlying struct with errors.As",
+      "secondary rate limit retry duration silently dropped"
+    ]
+  },
+  "constraints": [
+    "Decision-relevant retry signals must survive serialization and stringification boundaries",
+    "If Retry-After is available in a typed error, externally visible error representations must preserve it",
+    "Agent/tool-facing errors must include enough timing information to avoid blind retry behavior",
+    "Logging and string surfaces must not discard fields required for downstream retry decisions"
+  ],
+  "knobs": [
+    "error_string_includes_retry_after",
+    "structured_error_propagation",
+    "agent_tool_error_format",
+    "retry_after_visibility",
+    "rate_limit_error_formatter"
+  ],
+  "verification": [
+    "Construct an AbuseRateLimitError with RetryAfter populated",
+    "Call Error() and verify the returned string includes retry timing",
+    "Confirm the string output contains a machine-readable or human-readable retry-after duration",
+    "Verify callers that only receive Error() output can determine an appropriate wait interval",
+    "Regression test that RetryAfter is not silently dropped when present"
+  ],
+  "notes": "This is not a missing Retry-After parsing bug. The retry signal exists in the typed runtime object but is hidden at the boundary where many downstream systems, especially MCP tools and AI agents, consume errors as plain strings. The reusable lesson is that typed correctness is insufficient when decision-making happens after serialization.",
+  "tags": [
+    "github-api",
+    "secondary-rate-limit",
+    "retry-after",
+    "mcp",
+    "agent",
+    "string-boundary",
+    "signal-integrity",
+    "serialization"
+  ],
+  "signal_failure_type": "hidden",
+  "mitigation_signature": {
+    "hazards": [
+      "rate_limit_429",
+      "hidden_retry_signal",
+      "typed_signal_lost_at_serialization_boundary"
+    ],
+    "constraints": [
+      "retry timing must survive stringification",
+      "agent-facing errors must preserve decision-relevant fields",
+      "typed error fields must not disappear at tool/log boundaries"
+    ],
+    "knobs": [
+      "error_format",
+      "retry_after_rendering",
+      "structured_error_surface"
+    ],
+    "anti_patterns": [
+      "typed field populated but omitted from Error()",
+      "plain-string tool output hides retry timing",
+      "downstream agent forced to guess backoff"
+    ]
+  },
+    "routing_impact": {
+    "default_action": "retry_with_budget",
+    "cooldown_source": "retry_after_header"
+    }
+}
+
+
