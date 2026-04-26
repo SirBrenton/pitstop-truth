@@ -22,11 +22,11 @@ The result is predictable:
 
 ## Corpus overview
 
-- Receipts: 51  
-- Repositories: 30+  
-- Time range: July 2025 → April 2026  
-- Primary hazard class: rate_limit_429  
-- Secondary classes: timeout_deadline, retry_budget_exhausted  
+- **Receipts:** 51  
+- **Repositories:** 30+  
+- **Time range:** July 2025 → April 2026  
+- **Primary hazard class:** `rate_limit_429`  
+- **Secondary classes:** `timeout_deadline`, `retry_budget_exhausted`  
 
 Each receipt is structured:
 
@@ -35,7 +35,7 @@ hazard → constraints → knobs → verification
 All receipts are:
 - evidence-backed (issues, logs, PRs)
 - schema-validated
-- machine-readable (receipt.v0)
+- machine-readable (`receipt.v0`)
 
 ---
 
@@ -43,13 +43,13 @@ All receipts are:
 
 ### Pattern 1 — Retry-After ignored
 
-Clients detect 429 but do not consult the Retry-After header.
+Clients detect 429 but do not consult the `Retry-After` header.
 
-Result:
+**Result:**
 - retries occur inside provider cooldown window
 - all attempts are wasted
 
-Effect: retry amplification
+**Effect:** retry amplification
 
 ---
 
@@ -60,10 +60,10 @@ Different failure modes share the same retry path:
 - transient rate limit (WAIT)
 - quota exhaustion (STOP)
 
-Result:
+**Result:**
 - systems retry when recovery is impossible
 
-Effect: false liveness + wasted budget
+**Effect:** false liveness + wasted budget
 
 ---
 
@@ -88,10 +88,10 @@ Fallback logic only triggers for specific error types.
 
 Equivalent signals from other providers are not recognized.
 
-Result:
+**Result:**
 - system remains pinned to failing provider
 
-Effect: blocked failover
+**Effect:** blocked failover
 
 ---
 
@@ -124,8 +124,8 @@ Effect: persistent failure despite partial fix
 
 ## Pattern propagation
 
-Receipt PT-2026-04-19 documents a case where a fix in one repository
-(cline/cline) was independently implemented in another (OpenClaw)
+Receipt **PT-2026-04-19** documents a case where a fix in one repository
+(`cline/cline`) was independently implemented in another (`OpenClaw`)
 via issue citation.
 
 This shows:
@@ -134,7 +134,7 @@ This shows:
 - fixes propagate the same way  
 - a shared reference accelerates convergence  
 
-The corpus is beginning to act as a coordination layer, not just a record.
+The corpus is beginning to act as a **coordination layer**, not just a record.
 
 ---
 
@@ -159,7 +159,7 @@ The dominant failure mode is not implementation quality.
 
 It is:
 
-> loss of signal integrity across layers
+> **loss of signal integrity across layers**
 
 ---
 
@@ -178,7 +178,7 @@ Not just:
 - what failed
 
 But:
-- where the signal broke
+- **where the signal broke**
 
 ---
 
@@ -260,8 +260,8 @@ They emerge from interactions between:
 Corpus entrypoint:
 
 - https://github.com/SirBrenton/pitstop-truth
-- index.json
-- capability.json
+- `index.json`
+- `capability.json`
 
 ---
 

@@ -2,7 +2,7 @@
 
 Pitstop Truth is a machine-readable corpus of execution failures and signal integrity breakdowns in AI/API systems.
 
-Receipts are designed to be referenced in issues, PRs, documentation, and audits.
+Receipts are designed to be **referenced in issues, PRs, documentation, and audits**.
 
 ---
 
@@ -10,11 +10,16 @@ Receipts are designed to be referenced in issues, PRs, documentation, and audits
 
 Use the following format when referencing a specific receipt:
 
+```code
 Pitstop Truth Corpus, receipt <RECEIPT_ID>   <RECEIPT_URL>
+```
 
 ### Example
 
-Pitstop Truth Corpus, receipt PT-2026-04-25-github-go-github-4180-retryafter-string-boundary   https://github.com/SirBrenton/pitstop-truth
+```code
+Pitstop Truth Corpus, receipt PT-2026-04-25-github-go-github-4180-retryafter-string-boundary
+https://github.com/SirBrenton/pitstop-truth
+```
 
 ---
 
@@ -22,15 +27,22 @@ Pitstop Truth Corpus, receipt PT-2026-04-25-github-go-github-4180-retryafter-str
 
 When filing or commenting on issues, include:
 
-md Related pattern: <pattern-id>   Canonical receipt: <receipt-id> 
+```md
+Related pattern: <pattern-id>   Canonical receipt: <receipt-id> 
+```
 
 ### Example
 
-md Related pattern: retry-after-ignored-under-concurrency   Canonical receipt: PT-2026-03-21-github-openclaw-venice-models-429-retry-after-unwired 
+```md
+Related pattern: retry-after-ignored-under-concurrency
+Canonical receipt: PT-2026-03-21-github-openclaw-venice-models-429-retry-after-unwired
+```
 
 Optional context line:
 
-md This pattern is documented across multiple production systems: https://github.com/SirBrenton/pitstop-truth 
+```md This pattern is documented across multiple production systems:
+https://github.com/SirBrenton/pitstop-truth 
+```
 
 ---
 
@@ -49,7 +61,7 @@ Cite Pitstop Truth when:
 - you identify a recurring failure pattern (e.g. 429 misclassification, retry loops)
 - you want to show that an issue generalizes beyond a single codebase
 - you are proposing a fix shape that has precedent
-- you want to anchor discussion in documented evidence, not opinion
+- you want to anchor discussion in **documented evidence**, not opinion
 
 ---
 
@@ -63,7 +75,7 @@ Receipts are:
 
 The goal is to make execution failures:
 
-> referenceable, comparable, and verifiable
+> **referenceable, comparable, and verifiable**
 
 ---
 

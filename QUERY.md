@@ -2,7 +2,7 @@
 
 Pitstop Truth is a machine-readable corpus of execution failures and signal integrity breakdowns in AI/API systems.
 
-This document shows how to query and use the corpus—for humans, agents, and tools.
+This document shows how to **query and use the corpus**—for humans, agents, and tools.
 
 ---
 
@@ -12,7 +12,9 @@ The corpus exposes three primary entry points:
 
 ### 1. Capability (patterns + summary)
 
-id="7g5s0x" https://raw.githubusercontent.com/SirBrenton/pitstop-truth/main/capability.json
+```code
+https://raw.githubusercontent.com/SirBrenton/pitstop-truth/main/capability.json
+```
 
 Contains:
 - known failure patterns
@@ -24,7 +26,9 @@ Contains:
 
 ### 2. Index (receipt registry)
 
-id="l9k9l2" https://raw.githubusercontent.com/SirBrenton/pitstop-truth/main/index.json
+```code
+https://raw.githubusercontent.com/SirBrenton/pitstop-truth/main/index.json
+```
 
 Contains:
 - list of all receipts
@@ -35,11 +39,15 @@ Contains:
 
 ### 3. Receipt (ground truth)
 
-id="2dzn1n" receipts/YYYY/MM/<receipt-id>/receipt.json
+```code
+receipts/YYYY/MM/<receipt-id>/receipt.json
+```
 
 Each receipt contains:
 
-id="1h63yx" hazard → constraints → knobs → verification
+```code
+hazard → constraints → knobs → verification
+```
 
 ---
 
@@ -54,7 +62,7 @@ Use Pitstop Truth to classify and resolve failures:
    - workflow stall
 
 2. Search for a matching pattern
-   - via capability.json
+   - via `capability.json`
    - or by scanning pattern IDs
 
 3. Open the canonical receipt
@@ -77,7 +85,22 @@ Agents can map raw failures to known patterns.
 
 ### Prompt
 
-text id="2w4hsp" Given the following failure, map it to Pitstop Truth:  Return: - matching pattern_id (if any) - canonical receipt_id - hazard class - signal_failure_type (if inferable) - likely failure_layer - recommended constraints - recommended knobs - whether this appears to be a new pattern  Failure: <INSERT TRACE OR ISSUE> 
+```text
+Given the following failure, map it to Pitstop Truth:
+
+Return:
+- matching pattern_id (if any)
+- canonical receipt_id
+- hazard class
+- signal_failure_type (if inferable)
+- likely failure_layer
+- recommended constraints
+- recommended knobs
+- whether this appears to be a new pattern
+
+Failure:
+<INSERT TRACE OR ISSUE>
+```
 
 ---
 
@@ -89,7 +112,7 @@ Turn Pitstop Truth into a classification backend.
 
 ### Minimal flow
 
-1. Load capability.json
+1. Load `capability.json`
 2. Match input against:
    - pattern summaries
    - hazard classes
@@ -103,7 +126,16 @@ Turn Pitstop Truth into a classification backend.
 
 ### Example output
 
-json id="g0m5yx" {   "pattern_id": "retry-after-ignored-under-concurrency",   "receipt_id": "PT-2026-03-21-github-openclaw-venice-models-429-retry-after-unwired",   "hazard": "rate_limit_429",   "classification": "WAIT mishandled as immediate retry",   "recommended_action": "respect_retry_after_header",   "confidence": 0.91 } 
+```json
+{
+  "pattern_id": "retry-after-ignored-under-concurrency",
+  "receipt_id": "PT-2026-03-21-github-openclaw-venice-models-429-retry-after-unwired",
+  "hazard": "rate_limit_429",
+  "classification": "WAIT mishandled as immediate retry",
+  "recommended_action": "respect_retry_after_header",
+  "confidence": 0.91
+}
+```
 
 ---
 
