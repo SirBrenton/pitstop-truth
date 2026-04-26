@@ -76,6 +76,14 @@ Intended for agents and tools that need to understand what this corpus contains 
 
 ---
 
+## Use this corpus
+
+- Cite receipts and patterns in issues/PRs: see [`CITING.md`](CITING.md)
+- Query the corpus as a human, agent, or tool: see [`QUERY.md`](QUERY.md)
+- Read the April 2026 corpus report: see [`reports/pitstop-truth-corpus-2026-04.md`](reports/pitstop-truth-corpus-2026-04.md)
+
+---
+
 ## Signal Topology (why this exists)
 
 Most failures are not caused by missing retries.
