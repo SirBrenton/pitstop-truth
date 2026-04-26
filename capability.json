@@ -1,12 +1,12 @@
 {
     "schema": "pitstop-capability.v0",
     "name": "pitstop-truth",
-    "version": "0.1.31",
+    "version": "0.1.32",
     "description": "Machine-readable corpus of AI/API execution failures and execution-shape anti-patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, concurrency amplification, mutation-density failures, shared-budget coordination failures, hidden retry-ownership failures, and hidden retry-visibility failures \u2014 classified, verified, and cross-referenced across production systems.",
     "capability": "execution_failure_classification",
     "thesis": "AI/API systems fail when execution signals or constraints are misclassified, hidden, omitted, scoped incorrectly, or owned by the wrong layer. The recurring result is retry amplification, false liveness, blocked failover, undefined client behavior, and avoidable cost under shared constraints.",
     "corpus": {
-        "receipts": 49,
+        "receipts": 50,
         "hazard_classes": [
             "rate_limit_429",
             "timeout_deadline",
@@ -42,11 +42,12 @@
             "adcontextprotocol/adcp",
             "kirodotdev/Kiro",
             "logfwd/logfwd",
-            "lizhelang/codexbar"
+            "lizhelang/codexbar",
+            "google/go-github"
         ],
         "date_range": {
             "earliest": "2025-07-15",
-            "latest": "2026-04-23"
+            "latest": "2026-04-25"
         }
     },
     "query": {
@@ -454,6 +455,19 @@
             ],
             "canonical_receipt": "PT-2026-04-23-github-codexbar-11-ambiguous-signal-account-block",
             "fix": "Do not escalate ambiguous signals. Gate scope escalation behind explicit quota exhaustion signals. Preserve routing eligibility when signal certainty is low."
+        },
+        {
+            "id": "typed-signal-lost-at-serialization-boundary",
+            "hazard": "rate_limit_429",
+            "summary": "A retry signal is correctly parsed into a typed runtime object but omitted from the serialized or stringified error surface consumed by logs, tools, MCP servers, or AI agents. Downstream decision layers lose actionable retry timing and must guess backoff behavior.",
+            "classification": "hidden_retry_signal",
+            "confirmed_in": [
+                "google/go-github"
+            ],
+            "canonical_receipt": "PT-2026-04-25-github-go-github-4180-retryafter-string-boundary",
+            "fix": "Preserve decision-relevant retry fields across serialization and stringification boundaries. If Retry-After is available in a typed error, externally visible error representations must include enough timing information for downstream retry decisions.",
+            "note": "This pattern is distinct from missing Retry-After parsing. The signal exists in the typed runtime object, but disappears at the boundary where many downstream systems consume only strings. It is especially relevant to MCP tools and AI agents, where the model cannot inspect typed SDK structs.",
+            "signal_failure_type": "hidden"
         }
     ],
     "detection": {
@@ -483,5 +497,5 @@
     },
     "contact": "brent@pitstop.dev",
     "license": "Apache-2.0",
-    "last_updated": "2026-04-23"
+    "last_updated": "2026-04-25"
 }
