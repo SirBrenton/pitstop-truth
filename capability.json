@@ -1,12 +1,12 @@
 {
     "schema": "pitstop-capability.v0",
     "name": "pitstop-truth",
-    "version": "0.1.34",
+    "version": "0.1.35",
     "description": "Machine-readable corpus of AI/API execution failures and execution-shape anti-patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, concurrency amplification, mutation-density failures, shared-budget coordination failures, hidden retry-ownership failures, and hidden retry-visibility failures \u2014 classified, verified, and cross-referenced across production systems.",
     "capability": "execution_failure_classification",
     "thesis": "AI/API systems fail when execution signals or constraints are misclassified, hidden, omitted, scoped incorrectly, or owned by the wrong layer. The recurring result is retry amplification, false liveness, blocked failover, undefined client behavior, and avoidable cost under shared constraints.",
     "corpus": {
-        "receipts": 52,
+        "receipts": 53,
         "hazard_classes": [
             "rate_limit_429",
             "timeout_deadline",
@@ -44,7 +44,8 @@
             "logfwd/logfwd",
             "lizhelang/codexbar",
             "google/go-github",
-            "TauricResearch/TradingAgents"
+            "TauricResearch/TradingAgents",
+            "google-gemini/gemini-cli"
         ],
         "date_range": {
             "earliest": "2025-07-15",
@@ -493,6 +494,18 @@
             ],
             "canonical_receipt": "PT-2026-04-27-github-openclaw-openclaw-8673-oauth-refresh-single-shot",
             "fix": "Introduce bounded retry at the external call boundary with transient-error classification. Ensure retry preserves locking, timeout, and ownership semantics."
+        },
+        {
+            "id": "provider-reset-after-ignored-by-retry-scheduler",
+            "hazard": "rate_limit_429",
+            "summary": "Provider quota reset timing is emitted in the error response, but the retry scheduler uses generic exponential backoff instead of waiting until the declared reset time. The client retries before recovery is possible and sustains a rate-limit loop.",
+            "classification": "Provider reset signal ignored at retry boundary",
+            "confirmed_in": [
+                "google-gemini/gemini-cli"
+            ],
+            "canonical_receipt": "PT-2026-04-27-github-google-gemini-gemini-cli-23738-reset-after-ignored-retry-loop",
+            "fix": "Parse provider reset timing from the 429 response and use it as the minimum retry delay. Do not schedule retries before the provider-declared reset window expires.",
+            "note": "Distinct from header-only Retry-After handling: the actionable reset signal appears in provider error text such as 'Your quota will reset after 43s' and must still inform retry scheduling."
         }
     ],
     "detection": {
