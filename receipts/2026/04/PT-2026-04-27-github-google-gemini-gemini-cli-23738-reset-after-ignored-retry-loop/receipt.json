@@ -1,0 +1,88 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-04-27-github-google-gemini-gemini-cli-23738-reset-after-ignored-retry-loop",
+  "created_at": "2026-04-27T00:00:00Z",
+  "signal_failure_type": "ignored",
+  "signal_topology": {
+    "signal_origin": "provider",
+    "failure_layer": "runtime",
+    "decision_layer": "retry_logic",
+    "signal_failure_type": "ignored",
+    "downstream_effect": "retry_loop"
+  },
+  "source": {
+    "url": "https://github.com/google-gemini/gemini-cli/issues/23738",
+    "kind": "github_issue",
+    "repo": "google-gemini/gemini-cli",
+    "issue_or_pr": 23738
+  },
+  "hazard": {
+    "class": ["rate_limit_429"],
+    "summary": "Provider quota reset signal is ignored across the API-response-to-CLI-retry-logic boundary, causing retries before the reset time and a rate-limit retry loop.",
+    "signals": [
+      "Attempt 1 failed: You have exhausted your capacity on this model. Your quota will reset after 43s.. Retrying after 11308ms...",
+      "Attempt 2 failed: You have exhausted your capacity on this model. Your quota will reset after 31s.. Retrying after 21819ms...",
+      "Attempt 3 failed: You have exhausted your capacity on this model. Your quota will reset after 9s.. Retrying after 32245ms..."
+    ]
+  },
+  "constraints": [
+    "Retry logic must preserve provider-declared rate-limit reset signals across the API-response-to-retry-scheduler boundary.",
+    "Retry logic must not schedule quota or rate-limit retries before the provider-declared reset time.",
+    "Failure classification must not collapse cooldown-bearing quota exhaustion into generic transient failure.",
+    "Retry control must count repeated pre-reset retries against a bounded retry budget.",
+    "Fallback or routing logic must receive exhausted-quota signals before retrying the same capacity bucket."
+  ],
+  "knobs": [
+    "retry_delay_floor",
+    "reset_after_parser",
+    "rate_limit_classifier",
+    "retry_budget",
+    "model_cooldown_table",
+    "fallback_model_selection",
+    "backoff_strategy"
+  ],
+  "verification": [
+    "Setup: mock the provider to return HTTP 429 with an error body containing `Your quota will reset after 43s` and configure the client retry policy with a shorter exponential backoff delay. Action: run one request through the CLI retry path. Assertion: the next retry is not scheduled before 43 seconds have elapsed.",
+    "Setup: mock sequential 429 responses containing `Your quota will reset after 31s` and `Your quota will reset after 9s`. Action: execute retries under the normal retry scheduler. Assertion: each scheduled retry delay is at least the provider-declared reset interval for that response.",
+    "Setup: provide both a generic exponential backoff value and a provider reset interval where the reset interval is longer. Action: trigger a quota-exhaustion retry decision. Assertion: the selected delay equals or exceeds the provider reset time.",
+    "Setup: configure a simulated RPM bucket that remains saturated when requests arrive before reset. Action: run the CLI against repeated 429 quota responses. Assertion: the client does not send additional requests before reset and does not enter a continuous retry loop.",
+    "Setup: configure fallback routing with one model returning quota exhaustion and another model available. Action: trigger a request that receives the exhausted-model signal. Assertion: the exhausted-model signal is visible to routing or fallback logic and the client does not keep retrying only the exhausted model."
+  ],
+  "notes": "Dominant mechanism: provider reset-after timing is ignored by retry scheduling. Secondary context: the issue also reports a Windows node-pty crash, including `Error: AttachConsole failed`, but that crash is not the primary hazard. routing_impact omitted — canonical mapping unclear, requires human judgment.",
+  "tags": [
+    "gemini_cli",
+    "rate_limit",
+    "quota",
+    "reset_after",
+    "retry_loop",
+    "exponential_backoff",
+    "rpm_bucket_saturation"
+  ],
+  "mitigation_signature": {
+    "hazards": [
+      "signal_ignored_at_retry_boundary",
+      "generic_backoff_overrides_provider_reset",
+      "missing_bounded_retry"
+    ],
+    "constraints": [
+      "Clients must delay quota retries until at least the provider-declared reset time.",
+      "Clients must expose quota exhaustion and reset timing to retry, fallback, and routing decisions.",
+      "Clients must cap or suppress retries before a known provider cooldown expires."
+    ],
+    "knobs": [
+      "retry_delay_floor",
+      "reset_after_parser",
+      "rate_limit_classifier",
+      "retry_budget",
+      "model_cooldown_table",
+      "fallback_model_selection",
+      "backoff_strategy"
+    ],
+    "anti_patterns": [
+      "using generic exponential backoff for quota responses with explicit reset times",
+      "retrying an exhausted model before its provider-declared cooldown expires",
+      "hiding quota-reset metadata inside user-facing error text only",
+      "treating provider capacity exhaustion as ordinary transient transport failure"
+    ]
+  }
+}
