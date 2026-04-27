@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-04-27T21:20:06Z",
+  "updated_at": "2026-04-27T21:54:48Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -1057,6 +1057,26 @@
         "transient_error_classifier"
       ],
       "path": "receipts/2026/04/PT-2026-04-27-github-openclaw-openclaw-8673-oauth-refresh-single-shot/receipt.json"
+    },
+    {
+      "id": "PT-2026-04-27-github-google-gemini-gemini-cli-23738-reset-after-ignored-retry-loop",
+      "date": "2026-04-27",
+      "hazard_class": [
+        "rate_limit_429"
+      ],
+      "source_url": "https://github.com/google-gemini/gemini-cli/issues/23738",
+      "repo": "google-gemini/gemini-cli",
+      "signals": [
+        "quota will reset after 43s",
+        "Retrying after 11308ms",
+        "Retrying before provider-declared reset time"
+      ],
+      "knobs": [
+        "retry_delay_floor",
+        "reset_after_parser",
+        "rate_limit_classifier"
+      ],
+      "path": "receipts/2026/04/PT-2026-04-27-github-google-gemini-gemini-cli-23738-reset-after-ignored-retry-loop/receipt.json"
     }
   ]
 }
