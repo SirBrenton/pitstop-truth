@@ -1,0 +1,86 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-04-27-github-openclaw-openclaw-8673-oauth-refresh-single-shot",
+  "created_at": "2026-04-27T00:00:00Z",
+  "signal_failure_type": "ignored",
+  "signal_topology": {
+    "signal_origin": "provider",
+    "failure_layer": "runtime",
+    "decision_layer": "retry_logic",
+    "signal_failure_type": "ignored",
+    "downstream_effect": "false_terminal"
+  },
+  "source": {
+    "url": "https://github.com/openclaw/openclaw/issues/8673",
+    "kind": "github_issue",
+    "repo": "openclaw/openclaw",
+    "issue_or_pr": 8673
+  },
+  "hazard": {
+    "class": ["retry_budget_exhausted"],
+    "summary": "Transient OAuth token refresh failure is ignored across the auth-profile retry boundary, causing false-terminal authentication failure instead of bounded retry.",
+    "signals": [
+      "2026-02-04T08:14:05.225Z [agents/auth-profiles] wrote refreshed credentials to claude cli file",
+      "2026-02-04T08:14:11.573Z [diagnostic] lane task error: lane=main durationMs=183 error=\"Error: OAuth token refresh failed for anthropic: Failed to refresh OAuth token for anthropic. Please try again or re-authenticate.\"",
+      "The token wasn't expired (8hrs remaining) - the refresh API call itself failed transiently. A gateway restart fixed it immediately.",
+      "const result = await getOAuthApiKey(oauthProvider, oauthCreds);\nif (!result) {\n  return null;\n}"
+    ]
+  },
+  "constraints": [
+    "Credential refresh logic must retry narrowly classified transient provider or transport failures before surfacing a terminal authentication failure.",
+    "Credential refresh logic must not retry permanent credential failures as transient failures.",
+    "Refresh retry policy must preserve refresh locks, hard deadlines, external credential adoption, and fallback semantics.",
+    "Bounded retry logic must surface the final refresh error after retry exhaustion.",
+    "Shared retry policy must not create unbounded or duplicate retries around provider plugins that already implement retry behavior."
+  ],
+  "knobs": [
+    "max_refresh_attempts",
+    "backoff_delay",
+    "transient_error_classifier",
+    "retry_placement",
+    "refresh_timeout",
+    "provider_plugin_retry_ownership"
+  ],
+  "verification": [
+    "Setup: configure OAuth refresh so the first provider/token request fails with a transient network error and the second request succeeds. Action: trigger agent credential refresh through the auth-profile path. Assertion: refresh retries, returns refreshed credentials, and does not surface a terminal OAuth failure.",
+    "Setup: configure OAuth refresh so every provider/token request fails with a transient timeout or HTTP 500 until the retry budget is exhausted. Action: trigger agent credential refresh. Assertion: the number of attempts is bounded and the final refresh error is preserved.",
+    "Setup: configure OAuth refresh to fail with a permanent OAuth error such as invalid_grant. Action: trigger agent credential refresh. Assertion: the permanent error is not retried as transient and is surfaced through the existing auth failure path.",
+    "Setup: enable existing refresh locking, timeout, and credential adoption/fallback paths while injecting one transient refresh failure. Action: trigger concurrent credential refresh attempts. Assertion: retry behavior preserves lock serialization, hard timeout behavior, and existing fallback/adoption semantics.",
+    "Setup: use a provider plugin that owns custom refresh behavior. Action: trigger refresh through the shared OAuth path. Assertion: shared retry policy does not cause unbounded or duplicate retry attempts around the plugin refresh operation."
+  ],
+  "notes": "Dominant mechanism: ordinary transient OAuth refresh failures cross from the provider into the auth-profile refresh runtime but are not classified for bounded retry, so the retry decision treats a temporary refresh failure as terminal and agents fail. Secondary context: existing fallback/adoption and refresh_token_reused recovery paths exist, but they do not cover ordinary network errors, timeouts, 429, or 5xx responses. New mitigation_signature.hazards label introduced: missing_transient_error_classifier. routing_impact omitted — canonical mapping unclear, requires human judgment.",
+  "tags": [
+    "oauth_refresh",
+    "auth_refresh",
+    "credential_refresh",
+    "retry",
+    "transient_error",
+    "false_terminal",
+    "agent_failure"
+  ],
+  "mitigation_signature": {
+    "hazards": [
+      "missing_bounded_retry",
+      "signal_ignored_at_retry_boundary",
+      "missing_transient_error_classifier"
+    ],
+    "constraints": [
+      "Refresh logic must distinguish transient provider or transport failures from permanent credential failures.",
+      "Retry policy must be bounded and must preserve refresh locks, deadlines, fallback, and adoption behavior."
+    ],
+    "knobs": [
+      "max_refresh_attempts",
+      "backoff_delay",
+      "transient_error_classifier",
+      "retry_placement",
+      "refresh_timeout",
+      "provider_plugin_retry_ownership"
+    ],
+    "anti_patterns": [
+      "single_shot_external_refresh",
+      "fallback_substitutes_for_retry",
+      "permanent_credential_error_retried_as_transient",
+      "generic_retry_bypasses_refresh_lock_or_timeout"
+    ]
+  }
+}

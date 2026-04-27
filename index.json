@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-04-26T17:37:06Z",
+  "updated_at": "2026-04-27T21:20:06Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -1037,6 +1037,26 @@
         "vendor_fallback_error_classes"
       ],
       "path": "receipts/2026/04/PT-2026-04-26-github-tradingagents-555-yfinance-rate-limit-fallback/receipt.json"
+    },
+    {
+      "id": "PT-2026-04-27-github-openclaw-openclaw-8673-oauth-refresh-single-shot",
+      "date": "2026-04-27",
+      "hazard_class": [
+        "retry_budget_exhausted"
+      ],
+      "source_url": "https://github.com/openclaw/openclaw/issues/8673",
+      "repo": "openclaw/openclaw",
+      "signals": [
+        "OAuth token refresh failed for anthropic",
+        "token wasn't expired; refresh API call failed transiently",
+        "getOAuthApiKey returns null without bounded retry"
+      ],
+      "knobs": [
+        "max_refresh_attempts",
+        "backoff_delay",
+        "transient_error_classifier"
+      ],
+      "path": "receipts/2026/04/PT-2026-04-27-github-openclaw-openclaw-8673-oauth-refresh-single-shot/receipt.json"
     }
   ]
 }
