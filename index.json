@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-04-28T16:25:34Z",
+  "updated_at": "2026-04-28T19:45:12Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -1097,6 +1097,29 @@
         "fallback backoff formula"
       ],
       "path": "receipts/2026/04/PT-2026-04-28-github-botpress-botpress-15145-cli-retry-after-overridden/receipt.json"
+    },
+    {
+      "id": "PT-2026-04-28-github-harvey-au-hover-365-waf-admission-hidden",
+      "date": "2026-04-28",
+      "hazard_class": [
+        "rate_limit_429",
+        "retry_budget_exhausted"
+      ],
+      "source_url": "https://github.com/Harvey-AU/hover/issues/365",
+      "repo": "Harvey-AU/hover",
+      "signals": [
+        "robots.txt and sitemap success authorizes 10,000-task page fanout",
+        "we retry, exhaust, and bill the time anyway",
+        "Terminal failures (WAF, soft-block, 4xx, parse error) stop retrying entirely",
+        "Server: AkamaiGHost"
+      ],
+      "knobs": [
+        "homepage_preflight_probe_enabled",
+        "waf_fingerprint_classifier",
+        "mid_job_circuit_breaker_first_N_pages",
+        "per_failure_class_retry_table"
+      ],
+      "path": "receipts/2026/04/PT-2026-04-28-github-harvey-au-hover-365-waf-admission-hidden/receipt.json"
     }
   ]
 }
