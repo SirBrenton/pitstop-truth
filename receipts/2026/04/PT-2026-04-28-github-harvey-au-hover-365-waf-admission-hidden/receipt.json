@@ -1,0 +1,112 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-04-28-github-harvey-au-hover-365-waf-admission-hidden",
+  "created_at": "2026-04-28T00:00:00Z",
+  "signal_failure_type": "hidden",
+  "source": {
+    "url": "https://github.com/Harvey-AU/hover/issues/365",
+    "kind": "github_issue",
+    "repo": "Harvey-AU/hover",
+    "issue_or_pr": 365
+  },
+  "signal_topology": {
+    "signal_origin": "provider",
+    "failure_layer": "classifier",
+    "decision_layer": "retry_logic",
+    "signal_failure_type": "hidden",
+    "downstream_effect": "retry_loop"
+  },
+  "hazard": {
+    "class": ["rate_limit_429", "retry_budget_exhausted"],
+    "summary": "Provider WAF block signals are hidden across the crawler admission boundary — robots.txt and sitemap success authorizes 10,000-task page fanout that exhausts retry budgets against terminal 403 blocks.",
+    "signals": [
+      "Some sites put a security wall in front of their pages (Cloudflare, Imperva, DataDome, Akamai). The wall lets /robots.txt and /sitemap.xml through (those are designed to be machine-readable), so we happily build a 10,000-task job — then every page hits the wall and 403s. We retry, exhaust, and bill the time anyway.",
+      "Add response-fingerprint checks in the crawler response handler (cf-mitigated: header, _Incapsula_Resource body marker, Server: DataDome, tiny-body-with-403/202).",
+      "Terminal failures (WAF, soft-block, 4xx, parse error) stop retrying entirely.",
+      "failure_class enum: dns, tcp, tls, http_4xx, http_5xx, http_429, waf, soft_block, ttfb_timeout, body_timeout, parse_error.",
+      "failure_details JSONB carries: HTTP status, selected response headers (server, cf-ray, cf-mitigated, retry-after, content-length, content-type), detection markers triggered, body snippet (512 B, sanitised), Go error class, timing breakdown (DNS/TCP/TLS/TTFB/total).",
+      "HoverBot/1.0 → 403",
+      "Hover/1.0 → 403",
+      "raw curl/7.x default UA → 403",
+      "Googlebot/2.1 (UA only) → 403",
+      "real Chrome UA → 200",
+      "Akamai 403s any non-browser UA including Googlebot — real Googlebot only gets through because Akamai verifies it via reverse-DNS / IP allowlist, not the UA string.",
+      "Server: AkamaiGHost",
+      "Set-Cookie: akaalb_*",
+      "Server-Timing: ak_p; desc=...",
+      "373/377-byte HTML body on a 403 (classic EdgeSuite block page)"
+    ]
+  },
+  "constraints": [
+    "Crawler admission must not treat robots.txt or sitemap availability as sufficient evidence that page fetches are crawlable.",
+    "Crawler admission must collect a representative page-scope provider response before enqueueing high-cardinality page tasks.",
+    "Provider block fingerprints must propagate from HTTP response handling into job admission, task failure classification, and retry policy.",
+    "Terminal WAF or soft-block signals must not consume transient retry budgets.",
+    "Job runners must short-circuit remaining tasks when an early page sample repeatedly matches terminal WAF fingerprints.",
+    "Failure reporting must distinguish domain-blocked terminal outcomes from generic task failure."
+  ],
+  "knobs": [
+    "homepage_preflight_probe_enabled",
+    "waf_fingerprint_classifier",
+    "waf_fingerprint_header_set",
+    "waf_fingerprint_body_marker_set",
+    "mid_job_circuit_breaker_first_N_pages",
+    "domain_waf_blocked_flag",
+    "per_failure_class_retry_table",
+    "terminal_failure_retry_budget",
+    "retry_after_honouring_for_429_5xx",
+    "failure_details_header_capture_allowlist",
+    "failure_details_body_snippet_bytes",
+    "customer_facing_domain_blocked_status"
+  ],
+  "verification": [
+    "Setup → Mock a domain where /robots.txt and /sitemap.xml return 200, but the homepage returns 403 with `cf-mitigated` WAF evidence. Action → Start a crawl for the domain. Assertion → The crawler marks the domain blocked before bulk page enqueue, creates no 10,000-task page fanout, and exposes a domain-blocked job status.",
+    "Setup → Mock a domain that passes admission but whose first N page responses return 403 with `Server: AkamaiGHost`, `Set-Cookie: akaalb_*`, and a classic small EdgeSuite block body. Action → Run the job runner through the first N page tasks. Assertion → The circuit breaker marks the domain blocked, short-circuits remaining tasks, and does not retry the terminal WAF failures.",
+    "Setup → Feed the response handler 403/202 responses containing `cf-mitigated: header`, `_Incapsula_Resource`, `Server: DataDome`, and Akamai signatures. Action → Classify each response. Assertion → Each response is assigned `failure_class = waf` and stores status, selected headers, detection markers, and sanitized body snippet in failure details.",
+    "Setup → Configure one task failure as `failure_class = waf` and another as `failure_class = http_429` with `retry-after`. Action → Apply retry policy. Assertion → The WAF task receives zero retries as terminal, while the 429 task uses class-specific backoff and honours `retry-after`.",
+    "Setup → Run a crawl against a domain where robots/sitemap access succeeds but all page fetches return WAF markers. Action → Inspect persisted task and job records after completion. Assertion → The job records a domain-blocked terminal outcome instead of only generic `failed` task states, and retry counts remain below the transient retry budget."
+  ],
+  "notes": "Dominant mechanism: WAF block signals are hidden at admission and retry-classification boundaries. robots.txt and sitemap availability are necessary but not sufficient for page crawlability — a page-scope preflight probe and WAF fingerprint classifier are required before high-cardinality task enqueue. The 429 failure class is part of the system's proposed failure taxonomy but is secondary to the WAF admission failure. Related PRs: #366 (UA rename), #367 (WAF detection/blocking).",
+  "tags": [
+    "crawler",
+    "waf",
+    "robots_txt",
+    "sitemap",
+    "retry_policy",
+    "failure_classification",
+    "circuit_breaker",
+    "preflight",
+    "cost_burn",
+    "rate_limit_429",
+    "narrow_admission_signal",
+    "doomed_task_fanout"
+  ],
+  "mitigation_signature": {
+    "hazards": [
+      "signal_ignored_at_routing_boundary",
+      "signal_ignored_at_retry_boundary",
+      "narrow_admission_signal_authorizes_broad_fanout"
+    ],
+    "constraints": [
+      "Crawler admission must validate page-scope reachability before high-cardinality enqueue.",
+      "Terminal block signals must be classified before retry policy is applied.",
+      "Provider block evidence must remain visible across response handling, job orchestration, and user-facing status."
+    ],
+    "knobs": [
+      "preflight_probe",
+      "waf_detector",
+      "mid_job_circuit_breaker",
+      "failure_class",
+      "failure_details",
+      "per_class_retry_policy",
+      "terminal_retry_budget"
+    ],
+    "anti_patterns": [
+      "Using robots.txt or sitemap success as proof of page crawl viability.",
+      "Enqueueing high-cardinality page tasks before representative provider-block detection.",
+      "Retrying WAF and 4xx terminal failures with the same policy as transient DNS, TCP, 5xx, or 429 failures.",
+      "Continuing user-agent tweaking after WAF fingerprints show a non-browser or allowlist block.",
+      "Collapsing DNS, TCP, TLS, WAF, soft-block, timeout, parse, and HTTP failures into a generic failed state."
+    ]
+  }
+}
