@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-04-27T21:54:48Z",
+  "updated_at": "2026-04-28T16:25:34Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -1077,6 +1077,26 @@
         "rate_limit_classifier"
       ],
       "path": "receipts/2026/04/PT-2026-04-27-github-google-gemini-gemini-cli-23738-reset-after-ignored-retry-loop/receipt.json"
+    },
+    {
+      "id": "PT-2026-04-28-github-botpress-botpress-15145-cli-retry-after-overridden",
+      "date": "2026-04-28",
+      "hazard_class": [
+        "rate_limit_429"
+      ],
+      "source_url": "https://github.com/botpress/botpress/pull/15145",
+      "repo": "botpress/botpress",
+      "signals": [
+        "retryDelay: (retryCount) => retryCount * 1000",
+        "First retry delay is 0ms (0 * 1000)",
+        "HTTP-date format Retry-After was silently dropped via parseInt \u2192 NaN"
+      ],
+      "knobs": [
+        "retryDelay function",
+        "Retry-After header parser",
+        "fallback backoff formula"
+      ],
+      "path": "receipts/2026/04/PT-2026-04-28-github-botpress-botpress-15145-cli-retry-after-overridden/receipt.json"
     }
   ]
 }

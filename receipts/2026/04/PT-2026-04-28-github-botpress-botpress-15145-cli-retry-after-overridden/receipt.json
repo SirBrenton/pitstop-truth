@@ -1,0 +1,96 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-04-28-github-botpress-botpress-15145-cli-retry-after-overridden",
+  "created_at": "2026-04-28T00:00:00Z",
+  "signal_failure_type": "overridden",
+  "source": {
+    "url": "https://github.com/botpress/botpress/pull/15145",
+    "kind": "github_pr",
+    "repo": "botpress/botpress",
+    "issue_or_pr": 15145
+  },
+  "signal_topology": {
+    "signal_origin": "provider",
+    "failure_layer": "transport",
+    "decision_layer": "retry_logic",
+    "signal_failure_type": "overridden",
+    "downstream_effect": "retry_loop"
+  },
+  "hazard": {
+    "class": ["rate_limit_429"],
+    "summary": "Provider Retry-After and rate-limit reset headers are overridden at the CLI ApiClient retry boundary by retryCount-based delay logic, causing rate-limited requests to retry immediately and enter a retry loop.",
+    "signals": [
+      "retryDelay: (retryCount) => retryCount * 1000",
+      "First retry delay is 0ms (0 * 1000)",
+      "Retries 429, 500, 502, 503, 504 identically",
+      "new client.Client({ retry: retry.config })",
+      "HTTP-date format Retry-After was silently dropped via parseInt → NaN"
+    ]
+  },
+  "constraints": [
+    "Retry logic must read provider-supplied Retry-After, RateLimit-Reset, and X-RateLimit-Reset headers before computing retry delay.",
+    "A client-specific retry configuration must not replace a richer shared retry policy with one that ignores rate-limit timing signals.",
+    "Retry timing parsers must accept both delta-seconds and HTTP-date Retry-After formats before falling back to local backoff.",
+    "Rate-limit responses must not be retried with the same timing policy as generic transient server errors.",
+    "Fallback retry delay must not produce a zero-delay first retry."
+  ],
+  "knobs": [
+    "retryDelay function",
+    "Retry-After header parser",
+    "RateLimit-Reset header parser",
+    "X-RateLimit-Reset header parser",
+    "fallback backoff formula",
+    "retryable status code set",
+    "ApiClient retry configuration"
+  ],
+  "verification": [
+    "Mock a CLI ApiClient response with status 429 and Retry-After: 2. Invoke retry delay for the first attempt. Assert delay is 2000ms, not 0ms.",
+    "Mock a CLI ApiClient response with status 429 and Retry-After set to an HTTP-date string. Invoke retry delay. Assert delay equals the positive difference between the date and now.",
+    "Mock a CLI ApiClient response with status 429 and RateLimit-Reset header. Assert retry delay uses RateLimit-Reset before falling back to retryCount-based delay.",
+    "Mock a CLI ApiClient response with status 500 and no rate-limit headers. Assert fallback delay is at least 1000ms and not 0ms.",
+    "Route a CLI command through ApiClient to a mock server returning 429 with Retry-After: 1 then success. Assert the second request is delayed by approximately 1000ms."
+  ],
+  "notes": "The CLI retry implementation in packages/cli/src/api/retry.ts overrides provider retry timing signals with degraded retryCount-based delay logic despite a correct implementation existing in packages/sdk/src/retry.ts in the same repo. The SDK reads Retry-After, RateLimit-Reset, and X-RateLimit-Reset and parses both seconds and HTTP-date formats. The CLI passes its degraded config into all API calls via new client.Client({ retry: retry.config }) in packages/cli/src/api/client.ts. Secondary issue: HTTP-date Retry-After was silently dropped via parseInt returning NaN — fixed in a second commit after Greptile code review identified the gap. PR merged same day by engineering team lead.",
+  "tags": [
+    "botpress",
+    "cli",
+    "api-client",
+    "retry-after",
+    "ratelimit-reset",
+    "rate-limit",
+    "http-date",
+    "429",
+    "sdk-parity",
+    "overridden"
+  ],
+  "mitigation_signature": {
+    "hazards": [
+      "signal_ignored_at_routing_boundary",
+      "retry_after_overridden_by_transport_cap",
+      "http_date_retry_after_dropped_by_numeric_parse"
+    ],
+    "constraints": [
+      "Provider retry timing headers must propagate into retry delay decisions.",
+      "Retry-After parsing must support both seconds and HTTP-date formats.",
+      "Fallback backoff must not produce zero-delay initial retries.",
+      "Rate-limit and 5xx retry paths must not share identical timing policy."
+    ],
+    "knobs": [
+      "retryDelay",
+      "Retry-After parser",
+      "fallback backoff formula",
+      "retryable status code set"
+    ],
+    "anti_patterns": [
+      "retryCount * 1000 without reading Retry-After",
+      "zero-ms first retry on rate-limited responses",
+      "treating 429 and 5xx identically in retry timing",
+      "parseInt on HTTP-date Retry-After returning NaN",
+      "duplicating SDK retry logic with degraded CLI version"
+    ]
+  },
+  "routing_impact": {
+    "default_action": "retry_with_budget",
+    "cooldown_source": "retry_after_header"
+  }
+}
