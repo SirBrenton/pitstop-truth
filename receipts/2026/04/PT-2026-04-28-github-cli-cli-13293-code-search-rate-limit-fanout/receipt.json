@@ -1,0 +1,104 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-04-28-github-cli-cli-13293-code-search-rate-limit-fanout",
+  "created_at": "2026-04-28T00:00:00Z",
+  "signal_failure_type": "ignored",
+  "source": {
+    "url": "https://github.com/cli/cli/issues/13293",
+    "kind": "github_issue",
+    "repo": "cli/cli",
+    "issue_or_pr": 13293
+  },
+  "signal_topology": {
+    "signal_origin": "provider",
+    "failure_layer": "orchestrator",
+    "decision_layer": "retry_logic",
+    "signal_failure_type": "ignored",
+    "downstream_effect": "workflow_stall"
+  },
+  "hazard": {
+    "class": ["rate_limit_429", "retry_budget_exhausted"],
+    "summary": "Provider code_search rate-limit headers are ignored across the API transport to skill-search orchestration boundary — parallel fanout exhausts a narrow resource-specific quota while the client plans against the broader account limit, causing workflow stall after 1-2 operations.",
+    "signals": [
+      "Run gh skill search agent-browser --limit 5",
+      "Run a second search for a different skill name",
+      "GitHub API rate limit exceeded. Please wait a minute and try again.",
+      "I suspect what's actually happening here is that you're hitting the code_search rate limit of 10 per minute when running skill search (which kicks off a few parallel requests).",
+      "* Request to https://api.github.com/search/code?q=filename%3ASKILL.md+agent-browser&per_page=100&page=1",
+      "* Request to https://api.github.com/search/code?q=filename%3ASKILL.md+path%3Aagent-browser&per_page=100&page=1",
+      "* Request to https://api.github.com/search/code?q=filename%3ASKILL.md+user%3Aagent-browser&per_page=100&page=1",
+      "> GET /search/code?q=filename%3ASKILL.md+agent-browser&per_page=100&page=1 HTTP/1.1",
+      "> GET /search/code?q=filename%3ASKILL.md+path%3Aagent-browser&per_page=100&page=1 HTTP/1.1",
+      "> GET /search/code?q=filename%3ASKILL.md+user%3Aagent-browser&per_page=100&page=1 HTTP/1.1",
+      "< HTTP/2.0 403 Forbidden",
+      "< X-Ratelimit-Limit: 100",
+      "< X-Ratelimit-Remaining: 0",
+      "< X-Ratelimit-Reset: 1777364425",
+      "< X-Ratelimit-Resource: code_search",
+      "< X-Ratelimit-Used: 100",
+      "{\"message\": \"API rate limit exceeded for user ID 1611510.\", \"status\": \"403\"}"
+    ]
+  },
+  "constraints": [
+    "Clients must budget API operations against provider resource-specific quotas when provider emits resource-scoped rate-limit headers.",
+    "Clients must not plan capacity from broad account limits when the invoked endpoint consumes a narrower resource-specific quota.",
+    "Rate-limit response headers must propagate into orchestration and retry decisions before additional same-resource requests are launched.",
+    "Same-resource request fanout must be bounded by remaining resource quota and reset time.",
+    "Retry guidance must use provider reset or retry signals for the exhausted resource rather than a generic delay.",
+    "Interactive discovery workflows must throttle, cache, batch, or reduce requests before exhausting narrow provider quotas."
+  ],
+  "knobs": [
+    "code_search request concurrency",
+    "per-resource token bucket keyed by X-Ratelimit-Resource",
+    "backoff delay derived from X-Ratelimit-Reset",
+    "preflight budget check using X-Ratelimit-Remaining",
+    "search query fanout count",
+    "client-side cache TTL",
+    "remote repository traversal batching",
+    "maximum in-flight /search/code requests per command invocation"
+  ],
+  "verification": [
+    "Setup → Configure a GitHub API test double so /search/code responses return X-Ratelimit-Resource: code_search and X-Ratelimit-Remaining: 0. Action → Run GH_DEBUG=api gh skill search agent-browser --limit 5. Assertion → The client does not launch additional /search/code requests after observing the exhausted code_search budget and reports reset-aware throttling.",
+    "Setup → Configure /search/code with a resource-specific quota lower than the general authenticated API quota. Action → Run two different gh skill search commands back-to-back. Assertion → The second command uses cached results, throttles, or waits according to the code_search resource budget and avoids an immediate HTTP/2.0 403 Forbidden.",
+    "Setup → Capture GH_DEBUG=api output for gh skill search with multiple generated code search queries. Action → Execute gh skill search agent-browser --limit 5. Assertion → The number of concurrent GET /search/code requests is bounded by the configured concurrency knob and does not exceed available X-Ratelimit-Remaining.",
+    "Setup → Mock a 403 response containing X-Ratelimit-Resource: code_search, X-Ratelimit-Remaining: 0, and X-Ratelimit-Reset: 1777364425. Action → Invoke the skill discovery command. Assertion → The user-facing message identifies the code_search resource limit and uses the reset/backoff signal rather than a generic delay."
+  ],
+  "notes": "Dominant causal chain: GitHub API emits HTTP 403 plus resource-specific headers for code_search quota exhaustion → headers propagate through API transport and are visible in GH_DEBUG=api → gh skill search orchestration has already kicked off multiple parallel /search/code requests and does not budget against the code_search resource → resource-specific exhaustion signal is ignored at the transport-to-orchestrator boundary → the client skips throttling/backoff/query reduction based on X-Ratelimit-Resource, X-Ratelimit-Remaining, and X-Ratelimit-Reset → skill discovery becomes unusable after 1-2 operations. Note: GitHub uses HTTP 403 for code_search quota exhaustion with full rate-limit headers — functionally equivalent to 429 for classification purposes.",
+  "tags": [
+    "github-cli",
+    "gh-skill",
+    "github-api",
+    "code-search",
+    "parallel-fanout",
+    "resource-specific-quota",
+    "workflow-stall",
+    "rate_limit_429"
+  ],
+  "mitigation_signature": {
+    "hazards": [
+      "signal_ignored_at_retry_boundary",
+      "unbounded_parallel_fanout",
+      "resource_specific_quota_exhausted_by_parallel_fanout"
+    ],
+    "constraints": [
+      "Clients must budget API operations against resource-specific provider quotas.",
+      "Clients must not launch parallel same-resource requests without checking remaining quota.",
+      "Clients must propagate rate-limit headers into retry and orchestration decisions.",
+      "Clients must honor reset-aware backoff for exhausted resources."
+    ],
+    "knobs": [
+      "per-resource rate-limit bucket",
+      "search request concurrency",
+      "query fanout reduction",
+      "cache TTL",
+      "reset-aware backoff",
+      "request batching"
+    ],
+    "anti_patterns": [
+      "planning against the general authenticated API limit while consuming a narrower endpoint-specific quota",
+      "kicking off parallel code search requests before checking code_search remaining budget",
+      "showing a generic delay when provider reset headers are available",
+      "remote discovery that depends on repeated uncached provider search calls"
+    ]
+  }
+}
