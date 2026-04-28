@@ -1,12 +1,12 @@
 {
     "schema": "pitstop-capability.v0",
     "name": "pitstop-truth",
-    "version": "0.1.35",
+    "version": "0.1.36",
     "description": "Machine-readable corpus of AI/API execution failures and execution-shape anti-patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, concurrency amplification, mutation-density failures, shared-budget coordination failures, hidden retry-ownership failures, and hidden retry-visibility failures \u2014 classified, verified, and cross-referenced across production systems.",
     "capability": "execution_failure_classification",
     "thesis": "AI/API systems fail when execution signals or constraints are misclassified, hidden, omitted, scoped incorrectly, or owned by the wrong layer. The recurring result is retry amplification, false liveness, blocked failover, undefined client behavior, and avoidable cost under shared constraints.",
     "corpus": {
-        "receipts": 53,
+        "receipts": 54,
         "hazard_classes": [
             "rate_limit_429",
             "timeout_deadline",
@@ -45,11 +45,12 @@
             "lizhelang/codexbar",
             "google/go-github",
             "TauricResearch/TradingAgents",
-            "google-gemini/gemini-cli"
+            "google-gemini/gemini-cli",
+            "botpress/botpress"
         ],
         "date_range": {
             "earliest": "2025-07-15",
-            "latest": "2026-04-27"
+            "latest": "2026-04-28"
         }
     },
     "query": {
@@ -291,7 +292,7 @@
             "id": "delivery-contract-fragmentation-liveness-failure",
             "hazard": "retry_budget_exhausted",
             "summary": "Retryable delivery outcomes are translated across sink, worker, checkpoint, and pipeline layers without a single terminal boundary. Local retry behavior remains plausible, but globally the pipeline can stall indefinitely because retry, hold, reject, and checkpoint advancement are not governed by one explicit delivery contract.",
-            "classification": "Unbounded WAIT path — retryable local failure becomes global liveness failure",
+            "classification": "Unbounded WAIT path \u2014 retryable local failure becomes global liveness failure",
             "confirmed_in": [
                 "logfwd/logfwd"
             ],
@@ -506,6 +507,19 @@
             "canonical_receipt": "PT-2026-04-27-github-google-gemini-gemini-cli-23738-reset-after-ignored-retry-loop",
             "fix": "Parse provider reset timing from the 429 response and use it as the minimum retry delay. Do not schedule retries before the provider-declared reset window expires.",
             "note": "Distinct from header-only Retry-After handling: the actionable reset signal appears in provider error text such as 'Your quota will reset after 43s' and must still inform retry scheduling."
+        },
+        {
+            "id": "sdk-cli-retry-implementation-divergence",
+            "hazard": "rate_limit_429",
+            "summary": "CLI retry implementation overrides correct SDK retry behavior with a degraded version that ignores Retry-After, RateLimit-Reset, and X-RateLimit-Reset. First retry fires at 0ms. All status codes retried with identical timing.",
+            "classification": "Retry-After overridden by degraded client-specific retry policy",
+            "confirmed_in": [
+                "botpress/botpress"
+            ],
+            "canonical_receipt": "PT-2026-04-28-github-botpress-botpress-15145-cli-retry-after-overridden",
+            "fix": "Read Retry-After, RateLimit-Reset, and X-RateLimit-Reset before computing retry delay. Parse both seconds and HTTP-date formats. Fall back to computed backoff only when headers are absent. Ensure first retry is not 0ms.",
+            "note": "First receipt documenting same-repo SDK/CLI divergence. Correct implementation existed in SDK and was not reused. HTTP-date Retry-After parsing gap identified by Greptile code review and fixed in second commit. PR merged same day.",
+            "signal_failure_type": "overridden"
         }
     ],
     "detection": {
@@ -535,5 +549,5 @@
     },
     "contact": "brent@pitstop.dev",
     "license": "Apache-2.0",
-    "last_updated": "2026-04-27"
+    "last_updated": "2026-04-28"
 }
