@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-04-28T19:45:12Z",
+  "updated_at": "2026-04-28T20:06:56Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -1120,6 +1120,28 @@
         "per_failure_class_retry_table"
       ],
       "path": "receipts/2026/04/PT-2026-04-28-github-harvey-au-hover-365-waf-admission-hidden/receipt.json"
+    },
+    {
+      "id": "PT-2026-04-28-github-cli-cli-13293-code-search-rate-limit-fanout",
+      "date": "2026-04-28",
+      "hazard_class": [
+        "rate_limit_429",
+        "retry_budget_exhausted"
+      ],
+      "source_url": "https://github.com/cli/cli/issues/13293",
+      "repo": "cli/cli",
+      "signals": [
+        "< X-Ratelimit-Resource: code_search",
+        "< X-Ratelimit-Remaining: 0",
+        "< HTTP/2.0 403 Forbidden",
+        "GitHub API rate limit exceeded. Please wait a minute and try again."
+      ],
+      "knobs": [
+        "per-resource rate-limit bucket",
+        "code_search request concurrency",
+        "backoff delay derived from X-Ratelimit-Reset"
+      ],
+      "path": "receipts/2026/04/PT-2026-04-28-github-cli-cli-13293-code-search-rate-limit-fanout/receipt.json"
     }
   ]
 }
