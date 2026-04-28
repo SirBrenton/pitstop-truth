@@ -1,12 +1,12 @@
 {
     "schema": "pitstop-capability.v0",
     "name": "pitstop-truth",
-    "version": "0.1.37",
+    "version": "0.1.38",
     "description": "Machine-readable corpus of AI/API execution failures and execution-shape anti-patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, concurrency amplification, mutation-density failures, shared-budget coordination failures, hidden retry-ownership failures, and hidden retry-visibility failures \u2014 classified, verified, and cross-referenced across production systems.",
     "capability": "execution_failure_classification",
     "thesis": "AI/API systems fail when execution signals or constraints are misclassified, hidden, omitted, scoped incorrectly, or owned by the wrong layer. The recurring result is retry amplification, false liveness, blocked failover, undefined client behavior, and avoidable cost under shared constraints.",
     "corpus": {
-        "receipts": 55,
+        "receipts": 56,
         "hazard_classes": [
             "rate_limit_429",
             "timeout_deadline",
@@ -47,7 +47,8 @@
             "TauricResearch/TradingAgents",
             "google-gemini/gemini-cli",
             "botpress/botpress",
-            "Harvey-AU/hover"
+            "Harvey-AU/hover",
+            "cli/cli"
         ],
         "date_range": {
             "earliest": "2025-07-15",
@@ -534,6 +535,19 @@
             "fix": "Collect a page-scope preflight response before high-cardinality enqueue. Classify WAF and terminal block fingerprints before applying retry policy. Add mid-job circuit breaker for domains that slip past admission.",
             "note": "This pattern generalizes beyond web crawlers to any system that uses a cheap proxy signal to authorize expensive downstream work. The admission signal is correct at its scope \u2014 the failure is that admission scope is too narrow for the execution decision being made.",
             "signal_failure_type": "hidden"
+        },
+        {
+            "id": "resource-specific-quota-exhausted-by-parallel-fanout",
+            "hazard": "rate_limit_429",
+            "summary": "Client plans API capacity against broad account limits while consuming a narrower resource-specific quota. Parallel fanout exhausts the narrow budget immediately. Provider reset headers are present but ignored \u2014 user sees a generic delay message instead of reset-aware throttling.",
+            "classification": "Resource-specific rate limit ignored at orchestration boundary",
+            "confirmed_in": [
+                "cli/cli"
+            ],
+            "canonical_receipt": "PT-2026-04-28-github-cli-cli-13293-code-search-rate-limit-fanout",
+            "fix": "Budget API operations against X-Ratelimit-Resource scope. Check X-Ratelimit-Remaining before launching parallel same-resource requests. Use X-Ratelimit-Reset for reset-aware backoff. Reduce query fanout or cache results.",
+            "note": "GitHub uses HTTP 403 for code_search quota exhaustion with full rate-limit headers \u2014 functionally equivalent to 429 for classification purposes. Generalizes to any API client that fans out requests against an endpoint with a tighter per-resource budget than the account-level limit.",
+            "signal_failure_type": "ignored"
         }
     ],
     "detection": {
