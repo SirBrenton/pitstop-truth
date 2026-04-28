@@ -1,12 +1,12 @@
 {
     "schema": "pitstop-capability.v0",
     "name": "pitstop-truth",
-    "version": "0.1.36",
+    "version": "0.1.37",
     "description": "Machine-readable corpus of AI/API execution failures and execution-shape anti-patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, concurrency amplification, mutation-density failures, shared-budget coordination failures, hidden retry-ownership failures, and hidden retry-visibility failures \u2014 classified, verified, and cross-referenced across production systems.",
     "capability": "execution_failure_classification",
     "thesis": "AI/API systems fail when execution signals or constraints are misclassified, hidden, omitted, scoped incorrectly, or owned by the wrong layer. The recurring result is retry amplification, false liveness, blocked failover, undefined client behavior, and avoidable cost under shared constraints.",
     "corpus": {
-        "receipts": 54,
+        "receipts": 55,
         "hazard_classes": [
             "rate_limit_429",
             "timeout_deadline",
@@ -46,7 +46,8 @@
             "google/go-github",
             "TauricResearch/TradingAgents",
             "google-gemini/gemini-cli",
-            "botpress/botpress"
+            "botpress/botpress",
+            "Harvey-AU/hover"
         ],
         "date_range": {
             "earliest": "2025-07-15",
@@ -520,6 +521,19 @@
             "fix": "Read Retry-After, RateLimit-Reset, and X-RateLimit-Reset before computing retry delay. Parse both seconds and HTTP-date formats. Fall back to computed backoff only when headers are absent. Ensure first retry is not 0ms.",
             "note": "First receipt documenting same-repo SDK/CLI divergence. Correct implementation existed in SDK and was not reused. HTTP-date Retry-After parsing gap identified by Greptile code review and fixed in second commit. PR merged same day.",
             "signal_failure_type": "overridden"
+        },
+        {
+            "id": "narrow-admission-signal-authorizes-broad-fanout",
+            "hazard": "retry_budget_exhausted",
+            "summary": "A narrow admission signal (robots.txt or sitemap success) is used to authorize high-cardinality task fanout. Provider block signals only visible at page scope are hidden from the admission layer, causing doomed tasks to exhaust retry budgets against terminal WAF 403 blocks.",
+            "classification": "Hidden terminal signal \u2014 narrow admission scope authorizes broad execution",
+            "confirmed_in": [
+                "Harvey-AU/hover"
+            ],
+            "canonical_receipt": "PT-2026-04-28-github-harvey-au-hover-365-waf-admission-hidden",
+            "fix": "Collect a page-scope preflight response before high-cardinality enqueue. Classify WAF and terminal block fingerprints before applying retry policy. Add mid-job circuit breaker for domains that slip past admission.",
+            "note": "This pattern generalizes beyond web crawlers to any system that uses a cheap proxy signal to authorize expensive downstream work. The admission signal is correct at its scope \u2014 the failure is that admission scope is too narrow for the execution decision being made.",
+            "signal_failure_type": "hidden"
         }
     ],
     "detection": {
