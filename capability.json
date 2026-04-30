@@ -1,12 +1,12 @@
 {
     "schema": "pitstop-capability.v0",
     "name": "pitstop-truth",
-    "version": "0.1.38",
+    "version": "0.1.39",
     "description": "Machine-readable corpus of AI/API execution failures and execution-shape anti-patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, concurrency amplification, mutation-density failures, shared-budget coordination failures, hidden retry-ownership failures, and hidden retry-visibility failures \u2014 classified, verified, and cross-referenced across production systems.",
     "capability": "execution_failure_classification",
     "thesis": "AI/API systems fail when execution signals or constraints are misclassified, hidden, omitted, scoped incorrectly, or owned by the wrong layer. The recurring result is retry amplification, false liveness, blocked failover, undefined client behavior, and avoidable cost under shared constraints.",
     "corpus": {
-        "receipts": 56,
+        "receipts": 57,
         "hazard_classes": [
             "rate_limit_429",
             "timeout_deadline",
@@ -48,11 +48,12 @@
             "google-gemini/gemini-cli",
             "botpress/botpress",
             "Harvey-AU/hover",
-            "cli/cli"
+            "cli/cli",
+            "openclaw/clawhub"
         ],
         "date_range": {
             "earliest": "2025-07-15",
-            "latest": "2026-04-28"
+            "latest": "2026-04-30"
         }
     },
     "query": {
@@ -547,6 +548,19 @@
             "canonical_receipt": "PT-2026-04-28-github-cli-cli-13293-code-search-rate-limit-fanout",
             "fix": "Budget API operations against X-Ratelimit-Resource scope. Check X-Ratelimit-Remaining before launching parallel same-resource requests. Use X-Ratelimit-Reset for reset-aware backoff. Reduce query fanout or cache results.",
             "note": "GitHub uses HTTP 403 for code_search quota exhaustion with full rate-limit headers \u2014 functionally equivalent to 429 for classification purposes. Generalizes to any API client that fans out requests against an endpoint with a tighter per-resource budget than the account-level limit.",
+            "signal_failure_type": "ignored"
+        },
+        {
+            "id": "auth-aware-rate-limit-scope-collapse",
+            "hazard": "rate_limit_429",
+            "summary": "Authenticated user identity is ignored at the rate-limiter bucket-selection boundary. Valid auth routes to a shared proxy IP bucket instead of a per-user bucket, causing false rate-limit denial from unrelated users exhausting the same shared capacity.",
+            "classification": "Enforcement scope broader than actor identity \u2014 false unavailability",
+            "confirmed_in": [
+                "openclaw/clawhub"
+            ],
+            "canonical_receipt": "PT-2026-04-30-github-openclaw-clawhub-390-auth-scope-collapse",
+            "fix": "Rate-limit bucket selection must use authenticated user identity when a valid token is present. IP fallback applies only to anonymous or invalid-token requests. When trusted client IP is unavailable, anonymous fallback buckets must be scoped to endpoint or artifact, not globally shared.",
+            "note": "Three fixes landed: (1) auth-aware limiter per-user bucket for authenticated requests, (2) relative Retry-After + enriched 429 CLI UX, (3) endpoint/artifact-scoped anonymous fallback when trusted IP unavailable. Extends the corpus into enforcement scope correctness \u2014 the Enforcement Scope Invariant from Execution Contract v1.1 applied to rate-limit bucket selection.",
             "signal_failure_type": "ignored"
         }
     ],
