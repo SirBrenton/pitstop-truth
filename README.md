@@ -84,6 +84,22 @@ Intended for agents and tools that need to understand what this corpus contains 
 
 ---
 
+## Normative specifications
+
+The corpus is grounded in two public specifications:
+
+- [`specs/EXECUTION_FAILURE_TAXONOMY_v1.md`](specs/EXECUTION_FAILURE_TAXONOMY_v1.md) — 
+  the minimal classification system (WAIT / CAP / STOP) that 
+  defines correct behavior before retry logic runs
+- [`specs/EXECUTION_CONTRACT_v1.1.md`](specs/EXECUTION_CONTRACT_v1.1.md) — 
+  the versioned execution contract defining budgets, 
+  classification, scope, enforcement, and receipts
+
+The taxonomy defines what should happen.
+The corpus documents what happened instead.
+
+---
+
 ## Signal Topology (why this exists)
 
 Most failures are not caused by missing retries.

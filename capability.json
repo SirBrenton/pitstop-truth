@@ -591,5 +591,9 @@
     },
     "contact": "brent@pitstop.dev",
     "license": "Apache-2.0",
-    "last_updated": "2026-04-28"
+    "last_updated": "2026-04-28",
+    "specs": {
+        "taxonomy": "https://github.com/SirBrenton/pitstop-truth/blob/main/specs/EXECUTION_FAILURE_TAXONOMY_v1.md",
+        "contract": "https://github.com/SirBrenton/pitstop-truth/blob/main/specs/EXECUTION_CONTRACT_v1.1.md"
+    }
 }
