@@ -1,0 +1,92 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-04-30-github-openclaw-clawhub-390-auth-scope-collapse",
+  "created_at": "2026-04-30T00:00:00Z",
+  "signal_failure_type": "ignored",
+  "source": {
+    "url": "https://github.com/openclaw/clawhub/issues/390",
+    "kind": "github_issue",
+    "repo": "openclaw/clawhub",
+    "issue_or_pr": 390
+  },
+  "signal_topology": {
+    "signal_origin": "runtime",
+    "failure_layer": "classifier",
+    "decision_layer": "retry_logic",
+    "signal_failure_type": "ignored",
+    "downstream_effect": "false_unavailable"
+  },
+  "hazard": {
+    "class": ["rate_limit_429"],
+    "summary": "Validated actor identity is ignored across the authentication-to-rate-limiter bucket-selection boundary, causing shared proxy IP bucket selection and false rate-limit denial for authenticated users.",
+    "signals": [
+      "Authenticated users bucketed with shared proxy IPs.",
+      "Valid auth, wrong bucket.",
+      "Rate limit exceeded",
+      "clawhub whoami works in CLI"
+    ]
+  },
+  "constraints": [
+    "Rate-limit enforcement must scope capacity buckets to the authenticated actor when authentication is valid.",
+    "Limiter classification must not prefer shared proxy IP over validated user identity for authenticated requests.",
+    "Authenticated users must not be coupled into the same rate-limit bucket solely because they share a proxy IP.",
+    "Fallback to IP-based rate limiting must apply only when the request is anonymous or the authentication token is invalid.",
+    "Rate-limit bucket selection must preserve the actor signal across the authentication-to-limiter boundary.",
+    "When trusted client IP is unavailable, anonymous fallback buckets must be scoped to endpoint or artifact, not globally shared."
+  ],
+  "knobs": [
+    "rate-limit bucket key precedence",
+    "authenticated-user bucket selection",
+    "anonymous request fallback bucket selection",
+    "invalid-token fallback bucket selection",
+    "proxy IP trust configuration",
+    "endpoint-scoped fallback bucket",
+    "rate-limit classification logic"
+  ],
+  "verification": [
+    "Setup: Configure two authenticated users behind the same proxy IP with valid tokens and a small rate-limit capacity per bucket. Action: Exhaust capacity with user A, then send a request with user B. Assertion: User B is evaluated against a distinct per-user bucket and is not denied because user A exhausted the shared proxy IP bucket.",
+    "Setup: Send an authenticated request with a valid token from a proxy IP shared by other users. Action: Inspect or trace the limiter bucket key selected for the request. Assertion: The selected bucket key uses the authenticated user identity and does not use only the shared proxy IP.",
+    "Setup: Send anonymous and invalid-token requests from the same proxy IP used by authenticated users. Action: Inspect or trace the limiter bucket key selected for each request. Assertion: IP fallback is used only for anonymous or invalid-token traffic, not for valid authenticated traffic.",
+    "Setup: Configure a test where a shared proxy IP bucket is already exhausted by unauthenticated traffic. Action: Send a valid authenticated request from the same proxy IP. Assertion: The authenticated request is classified into its per-user bucket and is not rejected due to the exhausted anonymous/IP bucket.",
+    "Setup: Remove trusted client IP headers so the limiter cannot see the real client IP. Action: Send anonymous download requests from two different clients. Assertion: Each client is bucketed by endpoint/artifact scope, not by a single global ip:unknown bucket."
+  ],
+  "notes": "Dominant mechanism: valid authentication identifies the consuming actor, but rate-limit bucket selection ignores the actor signal at the classification boundary and selects shared proxy IP capacity, causing false denial for authenticated users. Three distinct fixes landed: (1) PR #412 — auth-aware limiter uses per-user bucket for authenticated requests, IP fallback only for anonymous/invalid-token. (2) PR #421 — relative Retry-After + enriched 429 CLI error message. (3) Commit 9e09581 — when trusted client IP unavailable, anonymous downloads fall back to endpoint/artifact-scoped bucket instead of global ip:unknown. SirBrenton filed diagnosis comment Mar 4 identifying rate-limit UX collapse and auth-bucket misattribution.",
+  "tags": [
+    "rate-limit",
+    "auth",
+    "bucket-key",
+    "shared-proxy-ip",
+    "classifier",
+    "false-unavailable",
+    "clawhub",
+    "enforcement-scope",
+    "auth-aware-rate-limiting"
+  ],
+  "mitigation_signature": {
+    "hazards": [
+      "signal_ignored_at_routing_boundary",
+      "fallback_eligibility_mismatch",
+      "enforcement_scope_broader_than_signal_evidence"
+    ],
+    "constraints": [
+      "Rate-limit bucket selection must preserve validated actor identity.",
+      "Authenticated capacity accounting must be isolated per authenticated actor.",
+      "IP fallback must not override valid authentication.",
+      "Anonymous fallback buckets must not be globally shared across unrelated actors or artifacts."
+    ],
+    "knobs": [
+      "bucket key precedence",
+      "per-user limiter bucket",
+      "IP fallback policy",
+      "auth validity classifier",
+      "endpoint-scoped anonymous fallback"
+    ],
+    "anti_patterns": [
+      "authenticated_users_bucketed_by_shared_proxy_ip",
+      "valid_auth_wrong_bucket",
+      "ip_bucket_preferred_over_user_identity",
+      "shared_proxy_capacity_coupling",
+      "global_ip_unknown_bucket_for_anonymous_fallback"
+    ]
+  }
+}
