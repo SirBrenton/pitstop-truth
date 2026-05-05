@@ -1,0 +1,82 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-05-05-github-anthropics-claude-code-25805-429-signal-not-actionable",
+  "created_at": "2026-05-05T00:00:00Z",
+  "source": {
+    "url": "https://github.com/anthropics/claude-code/issues/25805",
+    "kind": "github_issue",
+    "repo": "anthropics/claude-code",
+    "issue_or_pr": 25805
+  },
+  "signal_topology": {
+    "signal_origin": "provider",
+    "failure_layer": "orchestrator",
+    "decision_layer": "retry_logic",
+    "signal_failure_type": "ignored",
+    "downstream_effect": "workflow_stall"
+  },
+  "hazard": {
+    "class": ["rate_limit_429"],
+    "summary": "429 rate-limit responses include recovery signals (Retry-After and rate-limit headers), but the CLI execution path does not convert these signals into a deterministic retry or guidance decision, resulting in workflow stall during onboarding and install flows.",
+    "signals": [
+      "CLI output: 'Rate limit exceeded' with no retry timing or guidance",
+      "Maintainer references fixes to Retry-After handling (#421)",
+      "Maintainer references auth-aware rate-limit buckets (#412)",
+      "Maintainer requests header capture (Retry-After, RateLimit-*, request-id) for diagnosis",
+      "Issue remains open after fixes to rate-limit handling paths"
+    ]
+  },
+  "constraints": [
+    "Rate-limit recovery signals must be translated into an actionable decision at the user-facing execution boundary.",
+    "Retry-After must determine retry timing or explicitly block execution until recovery.",
+    "CLI execution flows must not require users to manually inspect headers to determine next action.",
+    "Signal propagation across layers is insufficient unless it results in a deterministic execution decision."
+  ],
+  "knobs": [
+    "429 classification logic",
+    "Retry-After handling",
+    "CLI retry behavior",
+    "backoff strategy",
+    "CLI user guidance generation"
+  ],
+  "verification": [
+    "Setup: Trigger a 429 response with Retry-After during CLI install. → Action: Run install command. → Assertion: CLI outputs actionable retry timing or wait instruction instead of generic 'Rate limit exceeded'.",
+    "Setup: Ensure Retry-After headers are present and parsed. → Action: Pass through CLI execution path. → Assertion: Retry behavior respects Retry-After instead of failing immediately.",
+    "Setup: Integration test across header parsing and CLI UX. → Action: Simulate rate-limited onboarding. → Assertion: User is given a deterministic next step without inspecting raw headers."
+  ],
+  "notes": "This receipt extends prior anthropics/claude-code patterns: PT-2026-02-26 (throughput vs quota confusion), PT-2026-03-30 (rolling window overage disabled). Dominant mechanism is not missing signal emission or failed header parsing — recovery signals are present and partially propagated but not converted into an actionable execution decision. This extends the corpus from missing/ignored signals to correct signals that cannot compose across layers into a unified decision.",
+  "tags": [
+    "github_issue",
+    "claude-code",
+    "rate-limit",
+    "429",
+    "retry-after",
+    "cli",
+    "onboarding",
+    "workflow-stall",
+    "signal-present-non-actionable"
+  ],
+  "mitigation_signature": {
+    "hazards": [
+      "signal_ignored_at_execution_boundary",
+      "per_layer_correctness_without_end_to_end_decision"
+    ],
+    "constraints": [
+      "Recovery signals must drive execution decisions, not just be observable.",
+      "Retry timing must be enforced at the execution boundary.",
+      "User-facing flows must expose actionable next steps."
+    ],
+    "knobs": [
+      "429 classification logic",
+      "Retry-After handling",
+      "CLI retry behavior",
+      "user guidance generation"
+    ],
+    "anti_patterns": [
+      "signals surfaced but not acted upon",
+      "per-layer fixes without unified decision ownership",
+      "generic error messages masking actionable recovery signals",
+      "requiring manual header inspection for retry decisions"
+    ]
+  }
+}
