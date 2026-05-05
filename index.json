@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-05-05T03:17:34Z",
+  "updated_at": "2026-05-05T21:11:26Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -1181,6 +1181,26 @@
         "CLI retry behavior"
       ],
       "path": "receipts/2026/05/PT-2026-05-05-github-anthropics-claude-code-25805-429-signal-not-actionable/receipt.json"
+    },
+    {
+      "id": "PT-2026-05-05-github-aiclient2api-576-retry-after-layer-divergence",
+      "date": "2026-05-05",
+      "hazard_class": [
+        "rate_limit_429"
+      ],
+      "source_url": "https://github.com/justlovemaki/AIClient2API/issues/576#issuecomment-4382735314",
+      "repo": "justlovemaki/AIClient2API",
+      "signals": [
+        "Retry-After header not read in non-streaming retry path",
+        "Maintainer confirms local retry ignores Retry-After",
+        "Concurrent retries can fire before provider cooldown expires"
+      ],
+      "knobs": [
+        "Retry-After parsing",
+        "retry scheduling logic",
+        "pool-level cooldown enforcement"
+      ],
+      "path": "receipts/2026/05/PT-2026-05-05-github-aiclient2api-576-retry-after-layer-divergence/receipt.json"
     }
   ]
 }
