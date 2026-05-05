@@ -1,12 +1,12 @@
 {
     "schema": "pitstop-capability.v0",
     "name": "pitstop-truth",
-    "version": "0.1.40",
+    "version": "0.1.41",
     "description": "Machine-readable corpus of AI/API execution failures and execution-shape anti-patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, concurrency amplification, mutation-density failures, shared-budget coordination failures, hidden retry-ownership failures, and hidden retry-visibility failures \u2014 classified, verified, and cross-referenced across production systems.",
     "capability": "execution_failure_classification",
     "thesis": "AI/API systems fail when execution signals or constraints are misclassified, hidden, omitted, scoped incorrectly, or owned by the wrong layer. The recurring result is retry amplification, false liveness, blocked failover, undefined client behavior, and avoidable cost under shared constraints.",
     "corpus": {
-        "receipts": 58,
+        "receipts": 59,
         "hazard_classes": [
             "rate_limit_429",
             "timeout_deadline",
@@ -53,7 +53,7 @@
         ],
         "date_range": {
             "earliest": "2025-07-15",
-            "latest": "2026-05-04"
+            "latest": "2026-05-05"
         }
     },
     "query": {
@@ -575,6 +575,19 @@
             "fix": "Rate-limit signals must be composed into a unified decision at the execution boundary. Transport parsing, auth bucket identity, and product flow must converge on a single actionable retry, wait, or guidance decision. Per-layer fixes are necessary but not sufficient.",
             "note": "Third evolution of anthropics/claude-code issue #25805. Prior receipts: PT-2026-02-26 (throughput vs quota confusion), PT-2026-03-30 (rolling window overage disabled). This extends the corpus from missing/ignored signals to correct signals that cannot compose across layers. First pattern where fixing the bug does not fix the system.",
             "signal_failure_type": "ignored"
+        },
+        {
+            "id": "retry-after-layer-divergence",
+            "hazard": "rate_limit_429",
+            "summary": "Retry-After is honored at a higher-level pool or cooldown layer but overridden by lower-level request retry handlers using independent exponential backoff. Individual retries can fire inside the provider cooldown window under concurrent load.",
+            "classification": "WAIT signal honored at pool layer — overridden at request layer",
+            "confirmed_in": [
+                "justlovemaki/AIClient2API"
+            ],
+            "canonical_receipt": "PT-2026-05-05-github-aiclient2api-576-retry-after-layer-divergence",
+            "fix": "Retry-After must be treated as minimum retry delay across all retry layers. Lower-level handlers must not schedule retries earlier than higher-level cooldown windows. Centralize retry ownership or coordinate across layers explicitly.",
+            "note": "First receipt with a complete routing_impact block. Maintainer confirmed finding in 28 minutes and added architectural context: pool-level cooldown reads Retry-After correctly, individual callApi/streamApi retries use local backoff independently. Fix proposed and accepted for future release.",
+            "signal_failure_type": "overridden"
         }
     ],
     "detection": {
@@ -604,7 +617,7 @@
     },
     "contact": "brent@pitstop.dev",
     "license": "Apache-2.0",
-    "last_updated": "2026-04-28",
+    "last_updated": "2026-05-05",
     "specs": {
         "taxonomy": "https://github.com/SirBrenton/pitstop-truth/blob/main/specs/EXECUTION_FAILURE_TAXONOMY_v1.md",
         "contract": "https://github.com/SirBrenton/pitstop-truth/blob/main/specs/EXECUTION_CONTRACT_v1.1.md"
