@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-04-30T16:04:20Z",
+  "updated_at": "2026-05-05T03:17:34Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -1162,6 +1162,25 @@
         "endpoint-scoped fallback bucket"
       ],
       "path": "receipts/2026/04/PT-2026-04-30-github-openclaw-clawhub-390-auth-scope-collapse/receipt.json"
+    },
+    {
+      "id": "PT-2026-05-05-github-anthropics-claude-code-25805-429-signal-not-actionable",
+      "date": "2026-05-05",
+      "hazard_class": [
+        "rate_limit_429"
+      ],
+      "source_url": "https://github.com/anthropics/claude-code/issues/25805",
+      "repo": "anthropics/claude-code",
+      "signals": [
+        "CLI output: 'Rate limit exceeded' with no retry timing or guidance",
+        "Issue remains open after fixes to rate-limit handling paths"
+      ],
+      "knobs": [
+        "429 classification logic",
+        "Retry-After handling",
+        "CLI retry behavior"
+      ],
+      "path": "receipts/2026/05/PT-2026-05-05-github-anthropics-claude-code-25805-429-signal-not-actionable/receipt.json"
     }
   ]
 }
