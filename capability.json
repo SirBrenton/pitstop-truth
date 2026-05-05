@@ -1,12 +1,12 @@
 {
     "schema": "pitstop-capability.v0",
     "name": "pitstop-truth",
-    "version": "0.1.39",
+    "version": "0.1.40",
     "description": "Machine-readable corpus of AI/API execution failures and execution-shape anti-patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, concurrency amplification, mutation-density failures, shared-budget coordination failures, hidden retry-ownership failures, and hidden retry-visibility failures \u2014 classified, verified, and cross-referenced across production systems.",
     "capability": "execution_failure_classification",
     "thesis": "AI/API systems fail when execution signals or constraints are misclassified, hidden, omitted, scoped incorrectly, or owned by the wrong layer. The recurring result is retry amplification, false liveness, blocked failover, undefined client behavior, and avoidable cost under shared constraints.",
     "corpus": {
-        "receipts": 57,
+        "receipts": 58,
         "hazard_classes": [
             "rate_limit_429",
             "timeout_deadline",
@@ -53,7 +53,7 @@
         ],
         "date_range": {
             "earliest": "2025-07-15",
-            "latest": "2026-04-30"
+            "latest": "2026-05-04"
         }
     },
     "query": {
@@ -561,6 +561,19 @@
             "canonical_receipt": "PT-2026-04-30-github-openclaw-clawhub-390-auth-scope-collapse",
             "fix": "Rate-limit bucket selection must use authenticated user identity when a valid token is present. IP fallback applies only to anonymous or invalid-token requests. When trusted client IP is unavailable, anonymous fallback buckets must be scoped to endpoint or artifact, not globally shared.",
             "note": "Three fixes landed: (1) auth-aware limiter per-user bucket for authenticated requests, (2) relative Retry-After + enriched 429 CLI UX, (3) endpoint/artifact-scoped anonymous fallback when trusted IP unavailable. Extends the corpus into enforcement scope correctness \u2014 the Enforcement Scope Invariant from Execution Contract v1.1 applied to rate-limit bucket selection.",
+            "signal_failure_type": "ignored"
+        },
+        {
+            "id": "signal-present-non-actionable",
+            "hazard": "rate_limit_429",
+            "summary": "Rate-limit recovery signals are present and correctly emitted at every layer but are not integrated into a unified decision model at the CLI execution boundary. Per-layer correctness does not produce system-level correctness.",
+            "classification": "Correct signal — insufficient decision integration",
+            "confirmed_in": [
+                "anthropics/claude-code"
+            ],
+            "canonical_receipt": "PT-2026-05-05-github-anthropics-claude-code-25805-429-signal-not-actionable",
+            "fix": "Rate-limit signals must be composed into a unified decision at the execution boundary. Transport parsing, auth bucket identity, and product flow must converge on a single actionable retry, wait, or guidance decision. Per-layer fixes are necessary but not sufficient.",
+            "note": "Third evolution of anthropics/claude-code issue #25805. Prior receipts: PT-2026-02-26 (throughput vs quota confusion), PT-2026-03-30 (rolling window overage disabled). This extends the corpus from missing/ignored signals to correct signals that cannot compose across layers. First pattern where fixing the bug does not fix the system.",
             "signal_failure_type": "ignored"
         }
     ],
