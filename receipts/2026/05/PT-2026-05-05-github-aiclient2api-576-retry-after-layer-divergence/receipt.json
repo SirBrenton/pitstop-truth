@@ -1,0 +1,110 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-05-05-github-aiclient2api-576-retry-after-layer-divergence",
+  "created_at": "2026-05-05T00:00:00Z",
+
+  "source": {
+    "url": "https://github.com/justlovemaki/AIClient2API/issues/576#issuecomment-4382735314",
+    "kind": "github_issue",
+    "repo": "justlovemaki/AIClient2API",
+    "issue_or_pr": 576
+  },
+
+  "signal_topology": {
+    "signal_origin": "provider",
+    "failure_layer": "runtime",
+    "decision_layer": "retry_logic",
+    "signal_failure_type": "overridden",
+    "downstream_effect": "retry_loop"
+  },
+
+  "hazard": {
+    "class": ["rate_limit_429"],
+    "summary": "Anthropic Retry-After signals are honored at the provider-pool cooldown layer but overridden by lower-level claude-core.js retry handlers, causing call-level retries to execute inside the provider recovery window.",
+    "signals": [
+      "claude-core.js retry handler uses exponential backoff: baseDelay * Math.pow(2, retryCount)",
+      "Retry-After header not read in non-streaming retry path (~line 111)",
+      "Retry-After header not read in streaming retry path (~line 207)",
+      "Maintainer confirms local retry ignores Retry-After",
+      "Maintainer notes higher-level pool cooldown reads Retry-After",
+      "Concurrent retries can fire before provider cooldown expires"
+    ]
+  },
+
+  "constraints": [
+    "Retry-After must be treated as the minimum retry delay across all retry layers.",
+    "Lower-level retry handlers must not schedule retries earlier than higher-level cooldown windows.",
+    "Only one retry owner may control timing for a given request path.",
+    "Rate-limit recovery decisions must be consistent across pool and call layers."
+  ],
+
+  "knobs": [
+    "Retry-After parsing",
+    "retry scheduling logic",
+    "exponential backoff parameters",
+    "pool-level cooldown enforcement",
+    "retry ownership assignment"
+  ],
+
+  "verification": [
+    "Setup: Configure Anthropic API to return 429 with Retry-After header. → Action: Trigger concurrent API calls through claude-core.js. → Assertion: Call-level retries fire before Retry-After expires when only exponential backoff is used.",
+    "Setup: Enable pool-level cooldown handling. → Action: Observe request scheduling during cooldown window. → Assertion: Pool enters cooldown but individual retry handlers still attempt early retries.",
+    "Setup: Patch retry handlers to respect Retry-After. → Action: Repeat concurrent test. → Assertion: No retries occur before the provider recovery window expires."
+  ],
+
+  "mitigation_signature": {
+    "hazards": [
+      "retry_after_ignored_at_call_layer",
+      "layered_retry_policy_divergence",
+      "signal_overridden_by_local_policy"
+    ],
+    "constraints": [
+      "Retry-After must propagate consistently across all retry layers.",
+      "Retry ownership must be centralized or coordinated.",
+      "Local retry policies must not override provider recovery signals."
+    ],
+    "knobs": [
+      "Retry-After handling",
+      "retry scheduling",
+      "cooldown enforcement",
+      "retry ownership model"
+    ],
+    "anti_patterns": [
+      "per-layer retry logic without coordination",
+      "pool-level cooldown with independent call-level retries",
+      "local backoff overriding provider-directed recovery timing",
+      "multiple retry owners on the same request path"
+    ]
+  },
+
+  "routing_impact": {
+    "default_action": "cooldown_and_route_away",
+    "cooldown_source": "retry_after_header",
+    "cooldown_scope_key": "provider_account",
+
+    "during_cooldown": {
+      "make_http_call": false,
+      "eligible_for_routing": false,
+      "emit_decision_event": true
+    },
+
+    "after_cooldown": {
+      "probe_strategy": "limited_qps",
+      "max_probe_qps": 1
+    }
+  },
+
+  "notes": "This receipt extends retry-after handling failures from 'missing or ignored' to 'layer divergence'. A higher-level cooldown mechanism correctly interprets Retry-After, but lower-level retry handlers continue operating on independent exponential backoff schedules. This creates early retries inside the recovery window under concurrency. The failure is not absence of signal, but inconsistency in retry ownership across layers. Related receipt: PT-2026-05-05-github-anthropics-claude-code-25805-429-signal-not-actionable — both document layer-correctness failures where correct handling at one layer does not produce correct behavior at the system boundary.",
+
+  "tags": [
+    "github_issue",
+    "aiclient2api",
+    "claude",
+    "rate-limit",
+    "429",
+    "retry-after",
+    "retry-divergence",
+    "concurrency",
+    "backoff"
+  ]
+}
