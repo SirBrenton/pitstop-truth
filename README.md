@@ -7,7 +7,7 @@ They fail because they act on signals they shouldn’t trust.
 
 This repo captures those failures as receipts:
 
-**hazard → constraints → knobs → verification**
+**hazard → constraints → knobs → verification → impact**
 
 > Machine-readable does not mean decision-worthy.
 
@@ -309,22 +309,27 @@ Optional fields may be omitted.
   - `hidden` — signal suppressed by an intermediate layer  
   - `overridden` — signal nullified by transport or timeout
 
-- `mitigation_signature`: compact, comparable summary of the guardrail pattern  
-  Intended for clustering and deduplication across receipts.  
+- `mitigation_signature`: compact, comparable summary of the guardrail pattern intended for clustering and deduplication across receipts.  
   Typical structure:
   - `hazards`: normalized hazard labels
   - `constraints`: distilled guardrail invariants
   - `knobs`: key control surfaces
   - `anti_patterns`: common failure shapes this prevents
 
-- `routing_impact`: router / executor-facing implications of the hazard  
-  Describes how a runtime system should behave when this pattern is detected.  
+- `routing_impact`: router / executor-facing implications of the hazard describes how a runtime system should behave when this pattern is detected.  
   May include:
   - `default_action` (e.g. `cooldown_and_route_away`, `failfast_with_hint`)
   - cooldown semantics or scope keys
   - probe strategy guidance
   - classification rules
   - detection thresholds (log signatures, repeat counts, etc.)
+
+- `impact`: operational and economic consequences of the hazard. Distinct from `hazard`, which describes what failed.
+  - `cost_channels`: array — `api_spend` | `latency` | `workflow_failure` |
+    `support_escalation` | `quota_burn` | `retry_amplification` |
+    `operator_debug_time` | `customer_visible_failure` | `incident_risk`
+  - `operator_impact`: what an operator or platform owner observes — the operational consequence, not the technical failure
+  - `business_consequence`: economic or business-level consequence for the buyer or operator
 
 Schema: `schemas/receipt.v0.json`
 

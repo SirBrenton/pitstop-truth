@@ -46,7 +46,7 @@
       "additionalProperties": false
     },
 
-        "mitigation_signature": {
+    "mitigation_signature": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -94,6 +94,40 @@
             "probe_strategy": { "type": "string", "enum": ["single_flight", "limited_qps", "none"] },
             "max_probe_qps": { "type": "number", "minimum": 0 }
           }
+        }
+      }
+    },
+
+    "impact": {
+      "type": "object",
+      "description": "Operational and economic consequences activated by this receipt. Distinct from hazard, which describes what failed.",
+      "additionalProperties": false,
+      "properties": {
+        "cost_channels": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "api_spend",
+              "latency",
+              "workflow_failure",
+              "support_escalation",
+              "quota_burn",
+              "retry_amplification",
+              "operator_debug_time",
+              "customer_visible_failure",
+              "incident_risk"
+            ]
+          }
+        },
+        "operator_impact": {
+          "type": "string",
+          "description": "What a Level 3/4 operator observes — the operational consequence, not the technical failure."
+        },
+        "business_consequence": {
+          "type": "string",
+          "description": "Economic or business-level consequence for the buyer or operator."
         }
       }
     },
