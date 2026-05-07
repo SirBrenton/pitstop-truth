@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-05-05T21:11:26Z",
+  "updated_at": "2026-05-07T17:24:25Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -1201,6 +1201,26 @@
         "pool-level cooldown enforcement"
       ],
       "path": "receipts/2026/05/PT-2026-05-05-github-aiclient2api-576-retry-after-layer-divergence/receipt.json"
+    },
+    {
+      "id": "PT-2026-05-06-github-aiclient2api-576-quota-aware-rfc-response",
+      "date": "2026-05-06",
+      "hazard_class": [
+        "rate_limit_429"
+      ],
+      "source_url": "https://github.com/justlovemaki/AIClient2API/issues/576",
+      "repo": "justlovemaki/AIClient2API",
+      "signals": [
+        "claude-core.js computes local exponential backoff without reading Retry-After",
+        "pool-level cooldown reads Retry-After correctly",
+        "RFC triggered quota-aware management redesign"
+      ],
+      "knobs": [
+        "Retry-After parser",
+        "reset hint parser priority",
+        "quota classifier"
+      ],
+      "path": "receipts/2026/05/PT-2026-05-06-github-aiclient2api-576-quota-aware-rfc-response/receipt.json"
     }
   ]
 }

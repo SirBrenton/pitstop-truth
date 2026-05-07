@@ -1,0 +1,137 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-05-06-github-aiclient2api-576-quota-aware-rfc-response",
+  "created_at": "2026-05-06T00:00:00Z",
+
+  "source": {
+    "url": "https://github.com/justlovemaki/AIClient2API/issues/576",
+    "kind": "github_issue",
+    "repo": "justlovemaki/AIClient2API",
+    "issue_or_pr": 576
+  },
+
+  "signal_failure_type": "overridden",
+
+  "signal_topology": {
+    "signal_origin": "provider",
+    "failure_layer": "runtime",
+    "decision_layer": "retry_logic",
+    "signal_failure_type": "overridden",
+    "downstream_effect": "retry_loop"
+  },
+
+  "hazard": {
+    "class": ["rate_limit_429"],
+    "summary": "Anthropic Retry-After is honored by the provider-pool cooldown layer but overridden by lower-level claude-core.js retry handlers, causing call-level retries to fire inside the provider recovery window under concurrent load.",
+    "signals": [
+      "claude-core.js non-streaming retry handler computes baseDelay * Math.pow(2, retryCount) without reading Retry-After header (lines 111-115)",
+      "claude-core.js streaming retry handler applies identical local exponential backoff (lines 207-212)",
+      "Maintainer confirmed: low-level retry handlers compute locally-based exponential backoff without reading Retry-After",
+      "Higher-level getRateLimitCooldownRecoveryTime in src/utils/common.js reads Retry-After correctly at pool level",
+      "Individual callApi/streamApi retries within pool cooldown window still use local backoff — can retry too early under concurrent load",
+      "RFC #580 defines reset time parsing priority: adapter-specific parser → generic header parsing → config default",
+      "PR #579 adds Reset hint parser preferring Retry-After header with fallback to local backoff",
+      "PR #578 adds quota-aware account switching — 429 responses classified as quota events not generic errors"
+    ]
+  },
+
+  "impact": {
+    "cost_channels": [
+      "api_spend",
+      "latency",
+      "quota_burn",
+      "retry_amplification",
+      "workflow_failure",
+      "operator_debug_time"
+    ],
+    "operator_impact": "Operators may see persistent 429s or degraded Claude request throughput even though a pool-level cooldown exists, because lower-level retries can continue firing inside the recovery window under concurrent load.",
+    "business_consequence": "Concurrent retries inside Anthropic cooldown windows waste paid API attempts, extend recovery time, reduce successful throughput, and forced a quota management redesign across pool and call layers."
+  },
+
+  "constraints": [
+    "Retry-After must be treated as the minimum retry delay across all retry layers that can issue provider calls.",
+    "Lower-level retry handlers must not schedule retries earlier than higher-level provider-pool cooldown windows.",
+    "Rate-limit recovery timing must be coordinated between provider-pool cooldown logic and per-call retry logic.",
+    "429 quota events must not be handled as generic retryable errors when provider recovery timing is available.",
+    "A request path must have a single clear retry owner so local backoff cannot override provider-directed cooldown."
+  ],
+
+  "knobs": [
+    "Retry-After header parser",
+    "reset hint parser priority order",
+    "local exponential backoff delay",
+    "RATE_LIMIT_COOLDOWN_MAX_MS",
+    "provider-pool cooldown window",
+    "per-call retry handler behavior",
+    "quota error classifier",
+    "account switching policy"
+  ],
+
+  "verification": [
+    "Setup: Mock an Anthropic 429 with Retry-After longer than local exponential backoff. Action: Trigger claude-core.js non-streaming retry path. Assertion: Next retry delay equals or exceeds Retry-After-derived cooldown, not local backoff value.",
+    "Setup: Mock the same 429 in the streaming path. Action: Trigger streamApi retry. Assertion: Streaming retry also honors Retry-After before falling back to local backoff.",
+    "Setup: Enable pool cooldown and trigger 429 with Retry-After. Action: Run concurrent callApi/streamApi requests during pool recovery window. Assertion: No lower-level retry fires a provider call before pool-level cooldown expires.",
+    "Setup: Provide 429 quota response with adapter-specific reset hint, Retry-After header, and config default. Action: Pass through quota-aware management. Assertion: Reset timing follows priority — adapter-specific parser, then generic header, then config default.",
+    "Setup: Trigger 429 quota response after implementing quota-aware account switching. Action: Classify and route through provider pools. Assertion: Response classified as quota event, not generic error. Retry and account-switching behavior aligns with selected reset window."
+  ],
+
+  "notes": "This receipt documents a layered retry-policy divergence. The finding was confirmed by the maintainer within 28 minutes and consolidated into a broader quota-aware management RFC (#580). The failure was not that Retry-After was absent everywhere — a higher-level provider-pool cooldown path already read it. The failure was that lower-level callApi/streamApi handlers retained independent local exponential backoff and could retry inside the provider recovery window. The maintainer response connected the fix to a unified reset hint parser (PR #579) and quota-aware account switching design (PR #578). This is the first receipt in the corpus where a Pitstop finding triggered an RFC-level architectural response rather than a single-file fix. max_probe_qps is set to 1 per the maintainer RFC design intent for limited_qps probe strategy.",
+
+  "tags": [
+    "github_issue",
+    "aiclient2api",
+    "claude",
+    "anthropic",
+    "rate_limit",
+    "429",
+    "retry_after",
+    "quota",
+    "cooldown",
+    "retry_divergence",
+    "layered_retry_policy",
+    "concurrency",
+    "rfc_response"
+  ],
+
+  "mitigation_signature": {
+    "hazards": [
+      "layered_retry_policy_divergence",
+      "signal_overridden_by_local_policy",
+      "retry_after_ignored_at_call_layer"
+    ],
+    "constraints": [
+      "Provider recovery timing must propagate consistently across pool and call retry layers.",
+      "Local retry policies must not override provider-directed cooldown windows.",
+      "Quota events must be classified before generic retry behavior runs."
+    ],
+    "knobs": [
+      "Retry-After parser",
+      "reset hint parser priority",
+      "local backoff schedule",
+      "provider-pool cooldown",
+      "quota classifier",
+      "account switching policy"
+    ],
+    "anti_patterns": [
+      "pool-level cooldown with independent call-level retries",
+      "local exponential backoff overriding Retry-After",
+      "multiple retry owners on the same provider request path",
+      "quota-bearing 429 treated as generic retryable error"
+    ]
+  },
+
+  "routing_impact": {
+    "default_action": "cooldown_and_route_away",
+    "cooldown_source": "retry_after_header",
+    "cooldown_scope_key": "provider_pool",
+    "during_cooldown": {
+      "make_http_call": false,
+      "eligible_for_routing": false,
+      "emit_decision_event": true
+    },
+    "after_cooldown": {
+      "probe_strategy": "limited_qps",
+      "max_probe_qps": 1
+    }
+  }
+}
