@@ -1,12 +1,12 @@
 {
     "schema": "pitstop-capability.v0",
     "name": "pitstop-truth",
-    "version": "0.1.41",
+    "version": "0.1.42",
     "description": "Machine-readable corpus of AI/API execution failures and execution-shape anti-patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, concurrency amplification, mutation-density failures, shared-budget coordination failures, hidden retry-ownership failures, and hidden retry-visibility failures \u2014 classified, verified, and cross-referenced across production systems.",
     "capability": "execution_failure_classification",
     "thesis": "AI/API systems fail when execution signals or constraints are misclassified, hidden, omitted, scoped incorrectly, or owned by the wrong layer. The recurring result is retry amplification, false liveness, blocked failover, undefined client behavior, and avoidable cost under shared constraints.",
     "corpus": {
-        "receipts": 59,
+        "receipts": 60,
         "hazard_classes": [
             "rate_limit_429",
             "timeout_deadline",
@@ -49,11 +49,12 @@
             "botpress/botpress",
             "Harvey-AU/hover",
             "cli/cli",
-            "openclaw/clawhub"
+            "openclaw/clawhub",
+            "justlovemaki/AIClient2API"
         ],
         "date_range": {
             "earliest": "2025-07-15",
-            "latest": "2026-05-05"
+            "latest": "2026-05-07"
         }
     },
     "query": {
@@ -587,6 +588,19 @@
             "canonical_receipt": "PT-2026-05-05-github-aiclient2api-576-retry-after-layer-divergence",
             "fix": "Retry-After must be treated as minimum retry delay across all retry layers. Lower-level handlers must not schedule retries earlier than higher-level cooldown windows. Centralize retry ownership or coordinate across layers explicitly.",
             "note": "First receipt with a complete routing_impact block. Maintainer confirmed finding in 28 minutes and added architectural context: pool-level cooldown reads Retry-After correctly, individual callApi/streamApi retries use local backoff independently. Fix proposed and accepted for future release.",
+            "signal_failure_type": "overridden"
+        },
+        {
+            "id": "layered-retry-policy-divergence",
+            "hazard": "rate_limit_429",
+            "summary": "Provider Retry-After is honored at a higher-level pool or cooldown layer but overridden by lower-level request retry handlers using independent exponential backoff. Individual retries can fire inside the provider cooldown window under concurrent load.",
+            "classification": "WAIT signal honored at pool layer — overridden at request layer",
+            "confirmed_in": [
+                "justlovemaki/AIClient2API"
+            ],
+            "canonical_receipt": "PT-2026-05-06-github-aiclient2api-576-quota-aware-rfc-response",
+            "fix": "Retry-After must be treated as minimum retry delay across all layers. Lower-level handlers must not schedule retries earlier than higher-level cooldown windows. Assign single retry ownership or coordinate explicitly across layers.",
+            "note": "First receipt where a Pitstop finding triggered an RFC-level architectural response rather than a single-file fix. Maintainer confirmed in 28 minutes. RFC #580 defined unified reset hint parser priority: adapter-specific → Retry-After header → config default.",
             "signal_failure_type": "overridden"
         }
     ],
