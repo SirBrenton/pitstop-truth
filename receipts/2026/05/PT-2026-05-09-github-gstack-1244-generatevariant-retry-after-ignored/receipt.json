@@ -1,0 +1,88 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-05-09-github-gstack-1244-generatevariant-retry-after-ignored",
+  "created_at": "2026-05-09T00:00:00Z",
+  "source": {
+    "url": "https://github.com/garrytan/gstack/issues/1244",
+    "kind": "github_issue",
+    "repo": "garrytan/gstack",
+    "issue_or_pr": 1244
+  },
+  "hazard": {
+    "class": ["rate_limit_429"],
+    "summary": "429 handler in generateVariant() ignored Retry-After header, causing retries inside provider cooldown window using only local exponential backoff.",
+    "signals": [
+      "429 handler detected rate limiting but did not inspect Retry-After",
+      "Retry delay controlled by local exponential schedule (2s/4s/8s)",
+      "Fix merged in PR #1337 via commit 00f966b",
+      "Closed as completed in GStack v1.30.0.0 by garrytan"
+    ]
+  },
+  "signal_topology": {
+    "signal_origin": "provider",
+    "failure_layer": "runtime",
+    "decision_layer": "retry_logic",
+    "signal_failure_type": "ignored",
+    "downstream_effect": "retry_loop"
+  },
+  "impact": {
+    "cost_channels": [
+      "quota_burn",
+      "retry_amplification",
+      "latency",
+      "workflow_failure",
+      "api_spend"
+    ],
+    "operator_impact": "Batch image generation workloads burned retry attempts inside provider cooldown windows, degrading throughput and wasting quota.",
+    "business_consequence": "Variable execution cost increases under concurrent load when provider cooldown windows are ignored by local retry scheduling."
+  },
+  "constraints": [
+    "Retry-After headers must take precedence over locally computed retry schedules when present.",
+    "429 retry logic must preserve provider cooldown semantics across batch execution paths.",
+    "Generated workflow code must inherit the same retry semantics as pool-level cooldown systems."
+  ],
+  "knobs": [
+    "Retry-After parsing",
+    "retry delay selection",
+    "batch concurrency behavior",
+    "fallback exponential backoff"
+  ],
+  "verification": [
+    "Setup: Configure image generation workflow where provider returns 429 with Retry-After. Action: Execute generateVariant() under batch load. Assertion: Retry scheduling honors Retry-After before local backoff.",
+    "Setup: Simulate cooldown windows longer than local retry schedule. Action: Trigger repeated generation attempts. Assertion: No retries occur before cooldown expires."
+  ],
+  "mitigation_signature": {
+    "hazards": [
+      "retry_after_ignored_under_concurrency",
+      "signal_ignored_at_retry_boundary"
+    ],
+    "constraints": [
+      "Provider cooldown signals must override local retry timing.",
+      "Retry decisions must remain synchronized with provider cooldown windows."
+    ],
+    "knobs": [
+      "Retry-After parsing",
+      "retry scheduling",
+      "fallback backoff logic"
+    ],
+    "anti_patterns": [
+      "handling 429 without consulting Retry-After",
+      "local retry policy overriding provider cooldown semantics",
+      "batch retries continuing during known cooldown periods"
+    ]
+  },
+  "notes": "Highest-profile confirmed fix in corpus. Merged by Garry Tan (YC co-founder) in GStack v1.30.0.0 as part of 21-PR community fix wave. Issue filed by SirBrenton with corpus reference. Fix implemented RFC 7231 compliant Retry-After parsing with 60s cap.",
+  "tags": [
+    "github_issue",
+    "429",
+    "retry-after",
+    "batch-generation",
+    "image-generation",
+    "gstack",
+    "garry-tan",
+    "yc",
+    "retry-amplification",
+    "provider-cooldown",
+    "workflow-runtime"
+  ]
+}

@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-05-07T17:24:25Z",
+  "updated_at": "2026-05-09T15:37:48Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -1221,6 +1221,24 @@
         "quota classifier"
       ],
       "path": "receipts/2026/05/PT-2026-05-06-github-aiclient2api-576-quota-aware-rfc-response/receipt.json"
+    },
+    {
+      "id": "PT-2026-05-09-github-gstack-1244-generatevariant-retry-after-ignored",
+      "date": "2026-05-09",
+      "hazard_class": [
+        "rate_limit_429"
+      ],
+      "source_url": "https://github.com/garrytan/gstack/issues/1244",
+      "repo": "garrytan/gstack",
+      "signals": [
+        "429 handler ignored Retry-After",
+        "fix merged PR #1337 by garrytan"
+      ],
+      "knobs": [
+        "Retry-After parsing",
+        "fallback exponential backoff"
+      ],
+      "path": "receipts/2026/05/PT-2026-05-09-github-gstack-1244-generatevariant-retry-after-ignored/receipt.json"
     }
   ]
 }
