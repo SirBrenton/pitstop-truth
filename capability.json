@@ -1,12 +1,12 @@
 {
     "schema": "pitstop-capability.v0",
     "name": "pitstop-truth",
-    "version": "0.1.42",
-    "description": "Machine-readable corpus of AI/API execution failures and execution-shape anti-patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, concurrency amplification, mutation-density failures, shared-budget coordination failures, hidden retry-ownership failures, and hidden retry-visibility failures \u2014 classified, verified, and cross-referenced across production systems.",
+    "version": "0.1.43",
+    "description": "Machine-readable corpus of AI/API execution failures and execution-shape anti-patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, concurrency amplification, mutation-density failures, shared-budget coordination failures, hidden retry-ownership failures, and hidden retry-visibility failures — classified, verified, and cross-referenced across production systems.",
     "capability": "execution_failure_classification",
     "thesis": "AI/API systems fail when execution signals or constraints are misclassified, hidden, omitted, scoped incorrectly, or owned by the wrong layer. The recurring result is retry amplification, false liveness, blocked failover, undefined client behavior, and avoidable cost under shared constraints.",
     "corpus": {
-        "receipts": 60,
+        "receipts": 61,
         "hazard_classes": [
             "rate_limit_429",
             "timeout_deadline",
@@ -50,11 +50,12 @@
             "Harvey-AU/hover",
             "cli/cli",
             "openclaw/clawhub",
-            "justlovemaki/AIClient2API"
+            "justlovemaki/AIClient2API",
+            "garrytan/gstack"
         ],
         "date_range": {
             "earliest": "2025-07-15",
-            "latest": "2026-05-07"
+            "latest": "2026-05-09"
         }
     },
     "query": {
@@ -115,20 +116,20 @@
         {
             "id": "autonomous-agent-taxonomy-convergence",
             "hazard": "rate_limit_429",
-            "summary": "Autonomous multi-agent system conflates quota exhaustion and transient rate limiting into a single backoff tier. Agents independently derive the WAIT/STOP distinction from first principles \u2014 confirming the taxonomy is discoverable without human guidance.",
-            "classification": "STOP vs WAIT collapsed \u2014 autonomous derivation",
+            "summary": "Autonomous multi-agent system conflates quota exhaustion and transient rate limiting into a single backoff tier. Agents independently derive the WAIT/STOP distinction from first principles — confirming the taxonomy is discoverable without human guidance.",
+            "classification": "STOP vs WAIT collapsed — autonomous derivation",
             "confirmed_in": [
                 "hivemoot/hivemoot-agent"
             ],
             "canonical_receipt": "PT-2026-03-22-github-hivemoot-agent-421-autonomous-taxonomy-convergence",
             "fix": "Separate backoff tiers: RATE_LIMIT_BACKOFF_FLOOR_SECS=300 for transient 429, QUOTA_BACKOFF_FLOOR_SECS=7200 for quota exhaustion. Map provider-specific error strings explicitly to hazard class before applying backoff.",
-            "note": "This pattern was independently derived by autonomous agents \u2014 not reported by a human engineer. Confirms the classification problem is real enough that agents solving it themselves arrive at the same taxonomy."
+            "note": "This pattern was independently derived by autonomous agents — not reported by a human engineer. Confirms the classification problem is real enough that agents solving it themselves arrive at the same taxonomy."
         },
         {
             "id": "taxonomy-adoption-in-production",
             "hazard": "rate_limit_429",
             "summary": "WAIT/CAP/STOP classification adopted as production implementation in LLM API circuit breaker within 4 hours of first contact. First external validation that the taxonomy is immediately actionable by engineers solving real agent reliability problems.",
-            "classification": "External adoption \u2014 taxonomy \u2192 production code",
+            "classification": "External adoption — taxonomy → production code",
             "confirmed_in": [
                 "massgen/MassGen"
             ],
@@ -139,20 +140,20 @@
         {
             "id": "message-content-classification-failure",
             "hazard": "rate_limit_429",
-            "summary": "Structural rate limit (billing/context tier) misclassified as transient rate limit by message-pattern matching. No Retry-After header present \u2014 classification must be made from error message content. Wrong guidance surfaced: 'try again later' instead of 'reduce context or enable billing'.",
+            "summary": "Structural rate limit (billing/context tier) misclassified as transient rate limit by message-pattern matching. No Retry-After header present — classification must be made from error message content. Wrong guidance surfaced: 'try again later' instead of 'reduce context or enable billing'.",
             "classification": "STOP misclassified as WAIT via message-pattern failure",
             "confirmed_in": [
                 "openclaw/openclaw"
             ],
             "canonical_receipt": "PT-2026-03-25-github-openclaw-55919-structural-rate-limit-misclassified",
             "fix": "Add dedicated classification branch for billing/tier signals before time-pattern gate. Structural limits (billing, context tier) must be classified as STOP regardless of Retry-After presence.",
-            "note": "New hazard sub-class: message-content classification failure. Previous receipts document header-value classification failure. This case has no Retry-After \u2014 the structural vs transient distinction must be made from error message content alone."
+            "note": "New hazard sub-class: message-content classification failure. Previous receipts document header-value classification failure. This case has no Retry-After — the structural vs transient distinction must be made from error message content alone."
         },
         {
             "id": "polling-amplification-cap",
             "hazard": "rate_limit_429",
-            "summary": "Multiple client instances independently polling the same rate-limited endpoint create additive concurrency burst that exceeds limits \u2014 even when individual instance usage is low. Per-instance backoff makes it worse, not better.",
-            "classification": "CAP \u2014 additive multi-instance concurrency burst",
+            "summary": "Multiple client instances independently polling the same rate-limited endpoint create additive concurrency burst that exceeds limits — even when individual instance usage is low. Per-instance backoff makes it worse, not better.",
+            "classification": "CAP — additive multi-instance concurrency burst",
             "confirmed_in": [
                 "nicklvsa/claude-hud"
             ],
@@ -164,25 +165,25 @@
             "id": "timeout-misclassified-as-rate-limit",
             "hazard": "timeout_deadline",
             "summary": "Request timeout triggers same exponential cooldown and auth profile rotation as explicit 429. A single transient network blip exhausts all profiles and cascades to provider fallback. Unified failure handler cannot distinguish timeout from rate limit.",
-            "classification": "Timeout treated as STOP \u2014 should be WAIT with retry gate",
+            "classification": "Timeout treated as STOP — should be WAIT with retry gate",
             "confirmed_in": [
                 "openclaw/openclaw"
             ],
             "canonical_receipt": "PT-2026-03-25-github-openclaw-23317-timeout-misclassified-as-rate-limit",
             "fix": "Add per-reason retry gate before cooldown. Timeout: retry same profile with jitter, only apply cooldown after retries exhausted. Explicit 429: still triggers immediate cooldown and rotation. Separate cooldown schedules per failure class.",
-            "note": "Inverse of standard 429 misclassification pattern. Previous receipts document 429 treated as wrong WAIT/STOP class. This documents a non-429 failure (timeout) treated as 429-equivalent \u2014 the unified failure handler is the root cause."
+            "note": "Inverse of standard 429 misclassification pattern. Previous receipts document 429 treated as wrong WAIT/STOP class. This documents a non-429 failure (timeout) treated as 429-equivalent — the unified failure handler is the root cause."
         },
         {
             "id": "rolling-window-overage-disabled",
             "hazard": "rate_limit_429",
-            "summary": "Rolling-window exhaustion with org-level overage disabled surfaces as identical error to throughput throttle and quota exhaustion. Dashboard shows 0-11% usage. Correct action is wait for 5-hour window reset \u2014 not 60s backoff. anthropic-ratelimit-unified-* header family is the classification signal.",
-            "classification": "STOP \u2014 rolling window reset required, not throughput backoff",
+            "summary": "Rolling-window exhaustion with org-level overage disabled surfaces as identical error to throughput throttle and quota exhaustion. Dashboard shows 0-11% usage. Correct action is wait for 5-hour window reset — not 60s backoff. anthropic-ratelimit-unified-* header family is the classification signal.",
+            "classification": "STOP — rolling window reset required, not throughput backoff",
             "confirmed_in": [
                 "anthropics/claude-code"
             ],
             "canonical_receipt": "PT-2026-03-30-github-claude-code-25805-rolling-window-overage-disabled",
             "fix": "Consult anthropic-ratelimit-unified-overage-status before applying retry logic. rejected + org_level_disabled = STOP until unified-5h-reset timestamp. Do not apply 60s backoff. Surface correct wait time to caller.",
-            "note": "Third distinct 429 sub-class now documented. All three surface as identical error message: (1) throughput throttle \u2014 WAIT 60s, (2) quota exhaustion \u2014 STOP weekly reset, (3) rolling-window overage disabled \u2014 STOP 5h window reset. Smoking gun: unified-5h-utilization near 1.0 + unified-status: blocked + unified-overage-status: rejected. Full anthropic-ratelimit-unified-* header schema confirmed via post-resolution capture. Dashboard does not expose 5h window utilization."
+            "note": "Third distinct 429 sub-class now documented. All three surface as identical error message: (1) throughput throttle — WAIT 60s, (2) quota exhaustion — STOP weekly reset, (3) rolling-window overage disabled — STOP 5h window reset. Smoking gun: unified-5h-utilization near 1.0 + unified-status: blocked + unified-overage-status: rejected. Full anthropic-ratelimit-unified-* header schema confirmed via post-resolution capture. Dashboard does not expose 5h window utilization."
         },
         {
             "id": "quota-window-429-failover-gap",
@@ -200,25 +201,25 @@
             "id": "billing-gate-message-only-wrong-enforcement-scope",
             "hazard": "rate_limit_429",
             "summary": "Anthropic long-context billing gate returns HTTP 429 with no Retry-After and no time-bound headers. Message body is the only classification signal. Correct hazard class (quota_exhausted) was identified but enforcement action was scoped to the API credential instead of the billing gate, blocking all provider requests for 30 minutes.",
-            "classification": "Correct hazard class \u2014 wrong enforcement scope",
+            "classification": "Correct hazard class — wrong enforcement scope",
             "confirmed_in": [
                 "gsd-build/gsd-2"
             ],
             "canonical_receipt": "PT-2026-04-02-github-gsd-3430-billing-gate-message-only-stop",
-            "fix": "Scope backoff to the specific gate that triggered it, not the API credential. Billing gate errors are account-level conditions \u2014 credential backoff has no effect on the error condition and blocks unaffected models.",
-            "note": "First documented case of correct hazard class with wrong enforcement scope. Previous receipts document wrong hazard class \u2192 wrong action. This case shows correct classification is necessary but not sufficient \u2014 enforcement scope must match the scope of the error condition. Also first receipt confirming a 429 subclass with no header signal \u2014 message body is the sole classification input."
+            "fix": "Scope backoff to the specific gate that triggered it, not the API credential. Billing gate errors are account-level conditions — credential backoff has no effect on the error condition and blocks unaffected models.",
+            "note": "First documented case of correct hazard class with wrong enforcement scope. Previous receipts document wrong hazard class → wrong action. This case shows correct classification is necessary but not sufficient — enforcement scope must match the scope of the error condition. Also first receipt confirming a 429 subclass with no header signal — message body is the sole classification input."
         },
         {
             "id": "stop-parent-child-propagation-failure",
             "hazard": "rate_limit_429",
             "summary": "Two parallel spawned child task agents hit the same account-level rate limit simultaneously. STOP condition with ~3 hour retry-after is not propagated to the parent session, which continues to appear in-progress for over an hour until manually cancelled.",
-            "classification": "STOP classified correctly at child level \u2014 not propagated to parent",
+            "classification": "STOP classified correctly at child level — not propagated to parent",
             "confirmed_in": [
                 "can1357/oh-my-pi"
             ],
             "canonical_receipt": "PT-2026-04-02-github-omp-607-stop-parent-child-propagation",
             "fix": "Propagate STOP conditions from child tasks to parent session immediately. Parent must reflect blocked state when all children are blocked. retry-after value must be surfaced to parent so recovery window is visible.",
-            "note": "First receipt documenting STOP propagation failure across agent boundaries. Previous receipts document STOP misclassification within a single retry loop. This case shows STOP classified correctly at the child level but silently absorbed \u2014 the parent has no visibility into child blocked state. Both child agents hit the same account-level limit within 1 second of each other, consistent with concurrent agents sharing a single quota pool."
+            "note": "First receipt documenting STOP propagation failure across agent boundaries. Previous receipts document STOP misclassification within a single retry loop. This case shows STOP classified correctly at the child level but silently absorbed — the parent has no visibility into child blocked state. Both child agents hit the same account-level limit within 1 second of each other, consistent with concurrent agents sharing a single quota pool."
         },
         {
             "id": "taxonomy-present-but-not-enforced",
@@ -248,7 +249,7 @@
             "id": "headerless-429-body-semantic-failover-gap",
             "hazard": "rate_limit_429",
             "summary": "Failover logic required Retry-After or reset headers to trigger 429 routing decisions, but the provider returned a headerless 429 whose only usable classification signal lived in the response body. Because semantic exhaustion was not read from the body, failover skipped viable fallback paths and remained pinned to exhausted backends.",
-            "classification": "Headerless 429 left unclassified \u2014 failover skipped despite semantic exhaustion signal",
+            "classification": "Headerless 429 left unclassified — failover skipped despite semantic exhaustion signal",
             "confirmed_in": [
                 "agentgateway/agentgateway"
             ],
@@ -272,13 +273,13 @@
             "id": "retryable-branch-no-terminal-boundary",
             "hazard": "retry_budget_exhausted",
             "summary": "Errors classified as retryable enter a retry schedule with no maximum attempt count or total elapsed bound. The runtime remains in a retry state indefinitely, never emitting a terminal signal, causing stalled execution and blocked downstream consumers.",
-            "classification": "Retryable treated as unbounded WAIT \u2014 no retry budget boundary",
+            "classification": "Retryable treated as unbounded WAIT — no retry budget boundary",
             "confirmed_in": [
                 "anomalyco/opencode"
             ],
             "canonical_receipt": "PT-2026-04-10-github-opencode-21960-retry-budget-boundary-missing",
             "fix": "Introduce retry budget constraints (max_retries or max_elapsed_ms). Ensure retry schedules terminate and emit a terminal error when recovery does not occur. Cap long retry-after values within a single execution window.",
-            "note": "This pattern captures a deeper execution failure than standard retry misclassification. The issue is not whether to retry, but that retryability has no boundary. Without a retry budget, systems defer failure indefinitely while appearing active \u2014 creating false liveness and unbounded resource consumption."
+            "note": "This pattern captures a deeper execution failure than standard retry misclassification. The issue is not whether to retry, but that retryability has no boundary. Without a retry budget, systems defer failure indefinitely while appearing active — creating false liveness and unbounded resource consumption."
         },
         {
             "id": "protocol-ack-coupled-to-throttled-execution",
@@ -296,7 +297,7 @@
             "id": "delivery-contract-fragmentation-liveness-failure",
             "hazard": "retry_budget_exhausted",
             "summary": "Retryable delivery outcomes are translated across sink, worker, checkpoint, and pipeline layers without a single terminal boundary. Local retry behavior remains plausible, but globally the pipeline can stall indefinitely because retry, hold, reject, and checkpoint advancement are not governed by one explicit delivery contract.",
-            "classification": "Unbounded WAIT path \u2014 retryable local failure becomes global liveness failure",
+            "classification": "Unbounded WAIT path — retryable local failure becomes global liveness failure",
             "confirmed_in": [
                 "logfwd/logfwd"
             ],
@@ -309,7 +310,7 @@
             "id": "shared-upstream-fetch-without-auth-or-cache",
             "hazard": "rate_limit_429",
             "summary": "Unauthenticated or uncached requests to a shared upstream resource in CI can fail deterministically with 429 under concurrency. Retry alone does not resolve the problem because all workers draw from the same upstream capacity pool.",
-            "classification": "CAP \u2014 shared upstream capacity exhausted without identity or caching",
+            "classification": "CAP — shared upstream capacity exhausted without identity or caching",
             "confirmed_in": [
                 "hiero-ledger/solo"
             ],
@@ -344,13 +345,13 @@
             "id": "secondary-rate-limit-from-unbatched-mutation-loops",
             "hazard": "rate_limit_429",
             "summary": "Secondary rate limits triggered by unbatched per-entity mutations and bursty write patterns. Individually correct operations compose into excessive mutation density under a shared API budget.",
-            "classification": "Execution shape failure \u2014 avoidable pressure under shared budget",
+            "classification": "Execution shape failure — avoidable pressure under shared budget",
             "confirmed_in": [
                 "TalonT-Org/AutoSkillit"
             ],
             "canonical_receipt": "PT-2026-04-16-github-autoskillit-992-secondary-rate-limit-unbatched-mutations",
             "fix": "Batch mutations (reviews, GraphQL aliases), serialize writes, and reduce per-entity loops. Treat API budget as a global execution constraint, not per-skill.",
-            "note": "This pattern extends Pitstop beyond failure classification into execution-shape failures. The system is not just mishandling 429s \u2014 it is manufacturing them through workflow design."
+            "note": "This pattern extends Pitstop beyond failure classification into execution-shape failures. The system is not just mishandling 429s — it is manufacturing them through workflow design."
         },
         {
             "id": "shared-budget-coordination-under-retry-after",
@@ -392,25 +393,25 @@
             "id": "long-retry-after-misclassified-as-wait",
             "hazard": "rate_limit_429",
             "summary": "A 429 with a long Retry-After is honored for delay timing but still treated as retryable. Quota exhaustion windows block execution for hours and consume retry attempts instead of surfacing immediately.",
-            "classification": "STOP misclassified as WAIT \u2014 Retry-After magnitude ignored as decision signal",
+            "classification": "STOP misclassified as WAIT — Retry-After magnitude ignored as decision signal",
             "confirmed_in": [
                 "cline/cline"
             ],
             "canonical_receipt": "PT-2026-04-04-github-cline-10139-long-retry-after-misclassified-as-wait",
             "fix": "Treat Retry-After magnitude as a decision signal, not just a delay signal. Inject x-should-retry: false when Retry-After exceeds threshold. Surface immediately to failover layer.",
-            "note": "The invariant this receipt proves: Retry-After is not just when \u2014 it is also whether. Confirmed and fixed within 24 hours of filing. Pattern subsequently propagated autonomously to OpenClaw \u2014 see cross-repo-taxonomy-propagation."
+            "note": "The invariant this receipt proves: Retry-After is not just when — it is also whether. Confirmed and fixed within 24 hours of filing. Pattern subsequently propagated autonomously to OpenClaw — see cross-repo-taxonomy-propagation."
         },
         {
             "id": "cross-repo-taxonomy-propagation",
             "hazard": "rate_limit_429",
-            "summary": "The same WAIT vs STOP misclassification documented in cline #10139 was independently fixed in OpenClaw via explicit issue citation \u2014 without direct Pitstop intervention. First corpus case of autonomous cross-repo taxonomy adoption.",
-            "classification": "STOP misclassified as WAIT \u2014 fix propagated autonomously via issue reference",
+            "summary": "The same WAIT vs STOP misclassification documented in cline #10139 was independently fixed in OpenClaw via explicit issue citation — without direct Pitstop intervention. First corpus case of autonomous cross-repo taxonomy adoption.",
+            "classification": "STOP misclassified as WAIT — fix propagated autonomously via issue reference",
             "confirmed_in": [
                 "openclaw/openclaw"
             ],
             "canonical_receipt": "PT-2026-04-19-github-openclaw-68474-cline-10139-cross-repo-propagation",
             "fix": "Inject x-should-retry: false when Retry-After exceeds configurable threshold (OPENCLAW_SDK_RETRY_MAX_WAIT_SECONDS). Parse retry-after-ms variant. Safe no-op for SDKs that do not check the header.",
-            "note": "This is not a new failure pattern \u2014 it is the first documented case of the corpus acting as a reference standard. One well-documented issue became the implementation reference for a fix in a separate codebase. The standard is beginning to propagate without direct intervention."
+            "note": "This is not a new failure pattern — it is the first documented case of the corpus acting as a reference standard. One well-documented issue became the implementation reference for a fix in a separate codebase. The standard is beginning to propagate without direct intervention."
         },
         {
             "id": "headerless-429-from-hidden-enforcer",
@@ -428,13 +429,13 @@
             "id": "detector-actor-mismatch",
             "hazard": "rate_limit_429",
             "summary": "Detector was narrowed to distinguish WAIT from STOP correctly, but the actor consuming the detector output was not updated to match. The resume path still fired on degraded 429 state despite the monitor function being fixed.",
-            "classification": "Correct classification \u2014 incomplete enforcement",
+            "classification": "Correct classification — incomplete enforcement",
             "confirmed_in": [
                 "Yeachan-Heo/oh-my-claudecode"
             ],
             "canonical_receipt": "PT-2026-04-20-github-oh-my-claudecode-2745-detector-actor-mismatch",
             "fix": "When narrowing a detector, audit all actors that consume its output. Add matching guards to resume paths, state transitions, and any branch that acts on the detector result.",
-            "note": "The invariant: the fix that narrows the detector must also narrow the actor. Two automated code reviewers approved an incomplete fix \u2014 the mismatch was subtle enough to pass automated review. Fastest fix-to-merge in the corpus: issue filed and merged within one hour.",
+            "note": "The invariant: the fix that narrows the detector must also narrow the actor. Two automated code reviewers approved an incomplete fix — the mismatch was subtle enough to pass automated review. Fastest fix-to-merge in the corpus: issue filed and merged within one hour.",
             "signal_failure_type": "ignored"
         },
         {
@@ -449,7 +450,7 @@
             ],
             "canonical_receipt": "PT-2026-04-22-github-copilotkit-3637-retry-after-overridden",
             "fix": "Inspect Retry-After before applying any backoff. maxDelayMs must not override server-directed wait. Retry-After exceeding threshold must classify as STOP and surface immediately.",
-            "note": "Core runtime location in CopilotKit \u2014 every downstream consumer inherits this behavior. Fix in PR #3842 is correct for delay timing but does not implement WAIT vs STOP classification.",
+            "note": "Core runtime location in CopilotKit — every downstream consumer inherits this behavior. Fix in PR #3842 is correct for delay timing but does not implement WAIT vs STOP classification.",
             "signal_failure_type": "overridden"
         },
         {
@@ -529,39 +530,39 @@
             "id": "narrow-admission-signal-authorizes-broad-fanout",
             "hazard": "retry_budget_exhausted",
             "summary": "A narrow admission signal (robots.txt or sitemap success) is used to authorize high-cardinality task fanout. Provider block signals only visible at page scope are hidden from the admission layer, causing doomed tasks to exhaust retry budgets against terminal WAF 403 blocks.",
-            "classification": "Hidden terminal signal \u2014 narrow admission scope authorizes broad execution",
+            "classification": "Hidden terminal signal — narrow admission scope authorizes broad execution",
             "confirmed_in": [
                 "Harvey-AU/hover"
             ],
             "canonical_receipt": "PT-2026-04-28-github-harvey-au-hover-365-waf-admission-hidden",
             "fix": "Collect a page-scope preflight response before high-cardinality enqueue. Classify WAF and terminal block fingerprints before applying retry policy. Add mid-job circuit breaker for domains that slip past admission.",
-            "note": "This pattern generalizes beyond web crawlers to any system that uses a cheap proxy signal to authorize expensive downstream work. The admission signal is correct at its scope \u2014 the failure is that admission scope is too narrow for the execution decision being made.",
+            "note": "This pattern generalizes beyond web crawlers to any system that uses a cheap proxy signal to authorize expensive downstream work. The admission signal is correct at its scope — the failure is that admission scope is too narrow for the execution decision being made.",
             "signal_failure_type": "hidden"
         },
         {
             "id": "resource-specific-quota-exhausted-by-parallel-fanout",
             "hazard": "rate_limit_429",
-            "summary": "Client plans API capacity against broad account limits while consuming a narrower resource-specific quota. Parallel fanout exhausts the narrow budget immediately. Provider reset headers are present but ignored \u2014 user sees a generic delay message instead of reset-aware throttling.",
+            "summary": "Client plans API capacity against broad account limits while consuming a narrower resource-specific quota. Parallel fanout exhausts the narrow budget immediately. Provider reset headers are present but ignored — user sees a generic delay message instead of reset-aware throttling.",
             "classification": "Resource-specific rate limit ignored at orchestration boundary",
             "confirmed_in": [
                 "cli/cli"
             ],
             "canonical_receipt": "PT-2026-04-28-github-cli-cli-13293-code-search-rate-limit-fanout",
             "fix": "Budget API operations against X-Ratelimit-Resource scope. Check X-Ratelimit-Remaining before launching parallel same-resource requests. Use X-Ratelimit-Reset for reset-aware backoff. Reduce query fanout or cache results.",
-            "note": "GitHub uses HTTP 403 for code_search quota exhaustion with full rate-limit headers \u2014 functionally equivalent to 429 for classification purposes. Generalizes to any API client that fans out requests against an endpoint with a tighter per-resource budget than the account-level limit.",
+            "note": "GitHub uses HTTP 403 for code_search quota exhaustion with full rate-limit headers — functionally equivalent to 429 for classification purposes. Generalizes to any API client that fans out requests against an endpoint with a tighter per-resource budget than the account-level limit.",
             "signal_failure_type": "ignored"
         },
         {
             "id": "auth-aware-rate-limit-scope-collapse",
             "hazard": "rate_limit_429",
             "summary": "Authenticated user identity is ignored at the rate-limiter bucket-selection boundary. Valid auth routes to a shared proxy IP bucket instead of a per-user bucket, causing false rate-limit denial from unrelated users exhausting the same shared capacity.",
-            "classification": "Enforcement scope broader than actor identity \u2014 false unavailability",
+            "classification": "Enforcement scope broader than actor identity — false unavailability",
             "confirmed_in": [
                 "openclaw/clawhub"
             ],
             "canonical_receipt": "PT-2026-04-30-github-openclaw-clawhub-390-auth-scope-collapse",
             "fix": "Rate-limit bucket selection must use authenticated user identity when a valid token is present. IP fallback applies only to anonymous or invalid-token requests. When trusted client IP is unavailable, anonymous fallback buckets must be scoped to endpoint or artifact, not globally shared.",
-            "note": "Three fixes landed: (1) auth-aware limiter per-user bucket for authenticated requests, (2) relative Retry-After + enriched 429 CLI UX, (3) endpoint/artifact-scoped anonymous fallback when trusted IP unavailable. Extends the corpus into enforcement scope correctness \u2014 the Enforcement Scope Invariant from Execution Contract v1.1 applied to rate-limit bucket selection.",
+            "note": "Three fixes landed: (1) auth-aware limiter per-user bucket for authenticated requests, (2) relative Retry-After + enriched 429 CLI UX, (3) endpoint/artifact-scoped anonymous fallback when trusted IP unavailable. Extends the corpus into enforcement scope correctness — the Enforcement Scope Invariant from Execution Contract v1.1 applied to rate-limit bucket selection.",
             "signal_failure_type": "ignored"
         },
         {
@@ -602,6 +603,19 @@
             "fix": "Retry-After must be treated as minimum retry delay across all layers. Lower-level handlers must not schedule retries earlier than higher-level cooldown windows. Assign single retry ownership or coordinate explicitly across layers.",
             "note": "First receipt where a Pitstop finding triggered an RFC-level architectural response rather than a single-file fix. Maintainer confirmed in 28 minutes. RFC #580 defined unified reset hint parser priority: adapter-specific → Retry-After header → config default.",
             "signal_failure_type": "overridden"
+        },
+        {
+            "id": "retry-after-ignored-in-generated-workflow",
+            "hazard": "rate_limit_429",
+            "summary": "429 handler in generated image generation workflow detected rate limiting but ignored Retry-After header. Retries fired on local exponential schedule (2s/4s/8s) inside provider cooldown window, burning all retry attempts before recovery was possible.",
+            "classification": "WAIT signal present — ignored by generated workflow retry handler",
+            "confirmed_in": [
+                "garrytan/gstack"
+            ],
+            "canonical_receipt": "PT-2026-05-09-github-gstack-1244-generatevariant-retry-after-ignored",
+            "fix": "Parse Retry-After per RFC 7231 (delta-seconds and HTTP-date). Cap honored waits at 60s. Skip leading exponential sleep on next iteration when Retry-After is honored. Fall back to exponential backoff only when header is absent.",
+            "note": "Highest-profile confirmed fix in corpus. Merged by Garry Tan (YC co-founder) in GStack v1.30.0.0 as part of 21-PR community fix wave. Issue #1244 filed by SirBrenton with corpus reference. Fix implements RFC 7231 compliant parsing with double-wait prevention. Extends the pattern into AI coding agent skill execution and image generation batch workflows.",
+            "signal_failure_type": "ignored"
         }
     ],
     "detection": {
@@ -616,8 +630,8 @@
         "repo": "https://github.com/SirBrenton/pitstop-check",
         "rules": [
             "429 handled without Retry-After",
-            "All 429s treated as retryable \u2014 CAP vs WAIT not distinguished",
-            "No max elapsed bound \u2014 retries may be unbounded",
+            "All 429s treated as retryable — CAP vs WAIT not distinguished",
+            "No max elapsed bound — retries may be unbounded",
             "Per-entity mutation loops without batching under shared API budgets",
             "Shared upstream limits handled with local-only retries",
             "Transport retries hide 429 from application-layer control",
@@ -631,7 +645,7 @@
     },
     "contact": "brent@pitstop.dev",
     "license": "Apache-2.0",
-    "last_updated": "2026-05-05",
+    "last_updated": "2026-05-09",
     "specs": {
         "taxonomy": "https://github.com/SirBrenton/pitstop-truth/blob/main/specs/EXECUTION_FAILURE_TAXONOMY_v1.md",
         "contract": "https://github.com/SirBrenton/pitstop-truth/blob/main/specs/EXECUTION_CONTRACT_v1.1.md"
