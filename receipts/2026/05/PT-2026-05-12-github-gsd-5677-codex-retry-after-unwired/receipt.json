@@ -1,0 +1,111 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-05-12-github-gsd-5677-codex-retry-after-unwired",
+  "created_at": "2026-05-12T00:00:00Z",
+  "signal_failure_type": "ignored",
+  "source": {
+    "url": "https://github.com/gsd-build/gsd-2/issues/5677",
+    "kind": "github_issue",
+    "repo": "gsd-build/gsd-2",
+    "issue_or_pr": 5677,
+    "fix_pr": "https://github.com/gsd-build/gsd-2/pull/5859"
+  },
+  "signal_topology": {
+    "signal_origin": "provider",
+    "failure_layer": "runtime",
+    "decision_layer": "retry_logic",
+    "signal_failure_type": "ignored",
+    "downstream_effect": "workflow_stall"
+  },
+  "hazard": {
+    "class": [
+      "rate_limit_429"
+    ],
+    "summary": "OpenAI Codex retry path ignores Retry-After while same-repo Gemini path handles it, causing retries inside the provider cooldown window",
+    "signals": [
+      "openai-codex-responses.ts uses pure exponential backoff for 429 responses — 1s, 2s, 4s — with no Retry-After header consulted.",
+      "The Gemini provider in the same repo handles this correctly: reads Retry-After, HTTP-date format, body patterns, and retryDelay JSON field.",
+      "When OpenAI returns Retry-After: 60, all three retries fire inside the cooldown window and fail. Retry budget exhausted. Agent run stalls.",
+      "PR #5859 fixed Codex 429 retry delays to honor server retry hints and added focused regression test coverage."
+    ]
+  },
+  "constraints": [
+    "429 retry logic must consult Retry-After before computing local exponential backoff.",
+    "Retry-After must be treated as the minimum retry delay for the affected provider path.",
+    "Provider-specific retry implementations must not diverge when a correct retry primitive already exists in the same codebase.",
+    "Fallback exponential backoff may run only when server retry hints are absent or unparsable."
+  ],
+  "knobs": [
+    "Retry-After parser",
+    "HTTP-date Retry-After parser",
+    "provider retry delay calculator",
+    "maximum retry attempts",
+    "fallback exponential backoff schedule",
+    "provider-specific retry handler reuse"
+  ],
+  "verification": [
+    "Simulate an OpenAI Codex 429 response with Retry-After: 60. Assert the next retry delay is at least 60 seconds, not 1, 2, or 4 seconds.",
+    "Simulate a 429 response with HTTP-date Retry-After. Assert the retry delay is parsed and honored as a floor.",
+    "Simulate a 429 response without Retry-After. Assert the existing exponential backoff fallback still applies.",
+    "Run the focused regression test added in PR #5859 and the relevant provider build/test suite."
+  ],
+  "impact": {
+    "cost_channels": [
+      "latency",
+      "workflow_failure",
+      "retry_amplification",
+      "quota_burn",
+      "customer_visible_failure"
+    ],
+    "operator_impact": "Agent runs stall because all retry attempts are consumed inside the provider cooldown window.",
+    "business_consequence": "Concurrent sessions amplify failed retries under sustained load, increasing user-visible failures and wasting provider quota without improving recovery."
+  },
+  "routing_impact": {
+    "default_action": "retry_with_budget",
+    "cooldown_source": "retry_after_header",
+    "cooldown_scope_key": "provider:openai-codex",
+    "during_cooldown": {
+      "make_http_call": false,
+      "eligible_for_routing": false,
+      "emit_decision_event": true
+    },
+    "after_cooldown": {
+      "probe_strategy": "single_flight",
+      "max_probe_qps": 1
+    }
+  },
+  "notes": "This is a clean same-repo divergence receipt: the Gemini provider already had the correct Retry-After handling, but the OpenAI Codex path used local exponential backoff. The reusable failure is not absence of a primitive; it is a correct primitive unwired at a sibling provider path. Issue #5677 was approved for agent work and PR #5859 opened with a fix and regression test.",
+  "tags": [
+    "correct_primitive_unwired_callers",
+    "same_repo_provider_divergence",
+    "retry_after_ignored",
+    "openai_codex",
+    "provider_cooldown_window",
+    "agent_run_stall",
+    "gsd"
+  ],
+  "mitigation_signature": {
+    "hazards": [
+      "correct_primitive_unwired_callers",
+      "retry_after_ignored"
+    ],
+    "constraints": [
+      "Retry-After must be consulted before local exponential backoff.",
+      "Correct provider retry primitives must be reused across sibling provider paths.",
+      "Server-directed cooldown windows must not be violated by local retry schedules."
+    ],
+    "knobs": [
+      "retry-after parser",
+      "retry delay floor",
+      "fallback backoff schedule",
+      "max attempts",
+      "provider retry helper reuse"
+    ],
+    "anti_patterns": [
+      "sibling provider retry divergence",
+      "pure exponential backoff on 429",
+      "retry attempts fired inside provider cooldown window",
+      "correct primitive present but unwired"
+    ]
+  }
+}
