@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-05-09T15:37:48Z",
+  "updated_at": "2026-05-12T22:02:13Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -1239,6 +1239,26 @@
         "fallback exponential backoff"
       ],
       "path": "receipts/2026/05/PT-2026-05-09-github-gstack-1244-generatevariant-retry-after-ignored/receipt.json"
+    },
+    {
+      "id": "",
+      "date": "",
+      "hazard_class": [
+        "rate_limit_429"
+      ],
+      "source_url": "https://github.com/gsd-build/gsd-2/issues/5677",
+      "repo": "gsd-build/gsd-2",
+      "signals": [
+        "openai-codex-responses.ts uses pure exponential backoff for 429 responses",
+        "Gemini provider in the same repo handles Retry-After correctly",
+        "Retry-After: 60 consumed inside cooldown window"
+      ],
+      "knobs": [
+        "Retry-After parser",
+        "fallback exponential backoff schedule",
+        "provider retry delay calculator"
+      ],
+      "path": "receipts/2026/05//receipt.json"
     }
   ]
 }
