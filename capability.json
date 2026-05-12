@@ -1,12 +1,12 @@
 {
     "schema": "pitstop-capability.v0",
     "name": "pitstop-truth",
-    "version": "0.1.43",
+    "version": "0.1.44",
     "description": "Machine-readable corpus of AI/API execution failures and execution-shape anti-patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, concurrency amplification, mutation-density failures, shared-budget coordination failures, hidden retry-ownership failures, and hidden retry-visibility failures — classified, verified, and cross-referenced across production systems.",
     "capability": "execution_failure_classification",
     "thesis": "AI/API systems fail when execution signals or constraints are misclassified, hidden, omitted, scoped incorrectly, or owned by the wrong layer. The recurring result is retry amplification, false liveness, blocked failover, undefined client behavior, and avoidable cost under shared constraints.",
     "corpus": {
-        "receipts": 61,
+        "receipts": 62,
         "hazard_classes": [
             "rate_limit_429",
             "timeout_deadline",
@@ -51,11 +51,12 @@
             "cli/cli",
             "openclaw/clawhub",
             "justlovemaki/AIClient2API",
-            "garrytan/gstack"
+            "garrytan/gstack",
+            "gsd-build/gsd-2"
         ],
         "date_range": {
             "earliest": "2025-07-15",
-            "latest": "2026-05-09"
+            "latest": "2026-05-12"
         }
     },
     "query": {
@@ -82,11 +83,12 @@
         {
             "id": "correct-primitive-unwired-callers",
             "hazard": "rate_limit_429",
-            "summary": "Retry utility supports Retry-After correctly but call sites never pass the required parameter. Correct behavior is unreachable.",
+            "summary": "Correct Retry-After handling exists within the same codebase or runtime, but sibling retry paths do not wire or reuse the primitive consistently.",
             "classification": "Silent omission at call site",
             "confirmed_in": [
                 "openclaw/openclaw",
-                "continuedev/continue"
+                "continuedev/continue",
+                "gsd-build/gsd-2"
             ],
             "canonical_receipt": "PT-2026-03-21-github-continue-dev-429-cap-wait-missing",
             "fix": "Wire retryAfterMs at every call site that handles 429 responses."
@@ -645,7 +647,7 @@
     },
     "contact": "brent@pitstop.dev",
     "license": "Apache-2.0",
-    "last_updated": "2026-05-09",
+    "last_updated": "2026-05-12",
     "specs": {
         "taxonomy": "https://github.com/SirBrenton/pitstop-truth/blob/main/specs/EXECUTION_FAILURE_TAXONOMY_v1.md",
         "contract": "https://github.com/SirBrenton/pitstop-truth/blob/main/specs/EXECUTION_CONTRACT_v1.1.md"
