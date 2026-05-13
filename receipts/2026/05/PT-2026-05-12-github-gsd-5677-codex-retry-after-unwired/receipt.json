@@ -74,7 +74,7 @@
       "max_probe_qps": 1
     }
   },
-  "notes": "This is a clean same-repo divergence receipt: the Gemini provider already had the correct Retry-After handling, but the OpenAI Codex path used local exponential backoff. The reusable failure is not absence of a primitive; it is a correct primitive unwired at a sibling provider path. Issue #5677 was approved for agent work and PR #5859 opened with a fix and regression test.",
+  "notes": "This is a clean same-repo divergence receipt: the Gemini provider already had the correct Retry-After handling, but the OpenAI Codex path used local exponential backoff. The reusable failure is not absence of a primitive; it is a correct primitive unwired at a sibling provider path. Issue #5677 was approved for agent work and PR #5859 opened with a fix and regression test. RESOLUTION: First corpus finding implemented by autonomous agent. Human triage approval by jeremymcs (Flux Labs / PatchDeck). PR #5859 merged with 154 lines and regression tests within minutes of approval.",
   "tags": [
     "correct_primitive_unwired_callers",
     "same_repo_provider_divergence",
@@ -82,7 +82,10 @@
     "openai_codex",
     "provider_cooldown_window",
     "agent_run_stall",
-    "gsd"
+    "gsd",
+    "agent_implemented_fix",
+    "first_autonomous_corpus_fix",
+    "patchdeck"
   ],
   "mitigation_signature": {
     "hazards": [
