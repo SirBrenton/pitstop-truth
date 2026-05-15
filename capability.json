@@ -1,12 +1,12 @@
 {
     "schema": "pitstop-capability.v0",
     "name": "pitstop-truth",
-    "version": "0.1.44",
+    "version": "0.1.45",
     "description": "Machine-readable corpus of AI/API execution failures and execution-shape anti-patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, concurrency amplification, mutation-density failures, shared-budget coordination failures, hidden retry-ownership failures, and hidden retry-visibility failures — classified, verified, and cross-referenced across production systems.",
     "capability": "execution_failure_classification",
     "thesis": "AI/API systems fail when execution signals or constraints are misclassified, hidden, omitted, scoped incorrectly, or owned by the wrong layer. The recurring result is retry amplification, false liveness, blocked failover, undefined client behavior, and avoidable cost under shared constraints.",
     "corpus": {
-        "receipts": 62,
+        "receipts": 63,
         "hazard_classes": [
             "rate_limit_429",
             "timeout_deadline",
@@ -52,11 +52,11 @@
             "openclaw/clawhub",
             "justlovemaki/AIClient2API",
             "garrytan/gstack",
-            "gsd-build/gsd-2"
+            "earendil-works/pi"
         ],
         "date_range": {
             "earliest": "2025-07-15",
-            "latest": "2026-05-12"
+            "latest": "2026-05-14"
         }
     },
     "query": {
@@ -75,7 +75,8 @@
                 "continuedev/continue",
                 "BerriAI/litellm",
                 "zulip/zulip",
-                "vercel/ai"
+                "vercel/ai",
+                "earendil-works/pi"
             ],
             "canonical_receipt": "PT-2026-03-21-github-openclaw-venice-models-429-retry-after-unwired",
             "fix": "Consult Retry-After header before retrying. Use header value as floor for retry delay."
@@ -647,7 +648,7 @@
     },
     "contact": "brent@pitstop.dev",
     "license": "Apache-2.0",
-    "last_updated": "2026-05-12",
+    "last_updated": "2026-05-14",
     "specs": {
         "taxonomy": "https://github.com/SirBrenton/pitstop-truth/blob/main/specs/EXECUTION_FAILURE_TAXONOMY_v1.md",
         "contract": "https://github.com/SirBrenton/pitstop-truth/blob/main/specs/EXECUTION_CONTRACT_v1.1.md"
