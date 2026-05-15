@@ -1,0 +1,96 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-05-14-github-pi-4377-codex-429-5xx-collapse",
+  "created_at": "2026-05-14T00:00:00Z",
+  "signal_failure_type": "ignored",
+  "source": {
+    "url": "https://github.com/earendil-works/pi/issues/4377",
+    "kind": "github_issue",
+    "repo": "earendil-works/pi",
+    "issue_or_pr": 4377,
+    "fix_pr": "https://github.com/earendil-works/pi/pull/4486"
+  },
+  "signal_topology": {
+    "signal_origin": "provider",
+    "failure_layer": "classifier",
+    "decision_layer": "retry_logic",
+    "signal_failure_type": "ignored",
+    "downstream_effect": "workflow_stall"
+  },
+  "hazard": {
+    "class": ["rate_limit_429"],
+    "summary": "OpenAI Codex retry logic collapses 429 and 5xx into the same exponential backoff path, ignoring Retry-After and exhausting retries inside provider cooldown",
+    "signals": [
+      "packages/ai/src/providers/openai-codex-responses.ts uses pure exponential backoff for 429 responses.",
+      "isRetryableError() collapses 429 and 5xx into the same retry path.",
+      "No Retry-After consulted.",
+      "When OpenAI returns Retry-After: 60, all retry attempts fire inside the cooldown window and fail.",
+      "Issue #4377 was closed as completed via PR #4486: fix(ai): OpenAI Codex SSE - prefer retry-after for retry timeout over default fallback."
+    ]
+  },
+  "constraints": [
+    "429 rate-limit responses must be classified separately from 5xx transient server failures before retry scheduling.",
+    "Retry-After must be treated as the minimum retry delay for 429 responses when present.",
+    "Local exponential backoff must not schedule retries inside a provider-declared cooldown window.",
+    "Fallback exponential backoff may apply to 429 only when Retry-After is absent or unparsable."
+  ],
+  "knobs": [
+    "Retry-After parser",
+    "429 vs 5xx classifier branch",
+    "minimum retry delay floor",
+    "fallback exponential backoff schedule",
+    "maximum retry attempts",
+    "provider cooldown handling"
+  ],
+  "verification": [
+    "Simulate an OpenAI Codex 429 response with Retry-After: 60. Assert retry delay is at least 60 seconds rather than the default exponential delay.",
+    "Simulate a 5xx response. Assert the existing exponential backoff path still applies.",
+    "Simulate a 429 response without Retry-After. Assert fallback exponential backoff applies.",
+    "Run the regression tests added or updated in PR #4486."
+  ],
+  "impact": {
+    "cost_channels": [
+      "latency",
+      "workflow_failure",
+      "retry_amplification",
+      "quota_burn",
+      "customer_visible_failure"
+    ],
+    "operator_impact": "Agent runs stall because retry attempts are consumed before the provider cooldown window expires.",
+    "business_consequence": "Rate-limited sessions fail unnecessarily under load, wasting retry budget and increasing user-visible execution failures."
+  },
+  "notes": "This receipt captures a classifier-boundary failure: 429 and 5xx were both treated as generic retryable errors even though they require different retry semantics. The same Codex Retry-After failure shape had been confirmed in gsd-build/gsd-2, but this case adds the clearer taxonomy collapse: 5xx is transient backoff, while 429 must honor provider cooldown signals.",
+  "tags": [
+    "retry_after_ignored",
+    "429_5xx_retry_path_collapse",
+    "openai_codex",
+    "provider_cooldown_window",
+    "exponential_backoff",
+    "agent_run_stall",
+    "pi"
+  ],
+  "mitigation_signature": {
+    "hazards": [
+      "retry_after_ignored",
+      "classifier_boundary_collapse"
+    ],
+    "constraints": [
+      "429 and 5xx must be classified before retry scheduling.",
+      "Retry-After must be honored as a retry delay floor.",
+      "Local backoff must not override provider cooldown semantics."
+    ],
+    "knobs": [
+      "retry-after parser",
+      "status-code classifier",
+      "retry delay floor",
+      "fallback backoff schedule",
+      "max attempts"
+    ],
+    "anti_patterns": [
+      "429 and 5xx collapsed into one retry branch",
+      "pure exponential backoff on provider rate limit",
+      "retry attempts fired inside cooldown window",
+      "provider signal ignored at classifier boundary"
+    ]
+  }
+}
