@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-05-12T22:02:13Z",
+  "updated_at": "2026-05-15T04:15:33Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -1259,6 +1259,26 @@
         "provider retry delay calculator"
       ],
       "path": "receipts/2026/05//receipt.json"
+    },
+    {
+      "id": "PT-2026-05-14-github-pi-4377-codex-429-5xx-collapse",
+      "date": "2026-05-14",
+      "hazard_class": [
+        "rate_limit_429"
+      ],
+      "source_url": "https://github.com/earendil-works/pi/issues/4377",
+      "repo": "earendil-works/pi",
+      "signals": [
+        "429 and 5xx collapsed into same retry path",
+        "Retry-After ignored",
+        "retry attempts fire inside cooldown window"
+      ],
+      "knobs": [
+        "Retry-After parser",
+        "429 vs 5xx classifier branch",
+        "fallback exponential backoff schedule"
+      ],
+      "path": "receipts/2026/05/PT-2026-05-14-github-pi-4377-codex-429-5xx-collapse/receipt.json"
     }
   ]
 }
