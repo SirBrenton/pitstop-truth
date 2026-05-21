@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-05-15T04:15:33Z",
+  "updated_at": "2026-05-21T01:45:34Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -1279,6 +1279,26 @@
         "fallback exponential backoff schedule"
       ],
       "path": "receipts/2026/05/PT-2026-05-14-github-pi-4377-codex-429-5xx-collapse/receipt.json"
+    },
+    {
+      "id": "PT-2026-05-20-github-genkit-ai-genkit-5270-hidden",
+      "date": "2026-05-20",
+      "hazard_class": [
+        "rate_limit_429"
+      ],
+      "source_url": "https://github.com/genkit-ai/genkit/issues/5270",
+      "repo": "genkit-ai/genkit",
+      "signals": [
+        "DEFAULT_RETRY_STATUSES includes RESOURCE_EXHAUSTED",
+        "Retry delay computation does not consult Retry-After header",
+        "PR #5343 adds responseMetadata.retryAfterMs to GenkitError"
+      ],
+      "knobs": [
+        "provider_signal_propagation",
+        "retry_delay_flooring",
+        "error_metadata_transport"
+      ],
+      "path": "receipts/2026/05/PT-2026-05-20-github-genkit-ai-genkit-5270-hidden/receipt.json"
     }
   ]
 }
