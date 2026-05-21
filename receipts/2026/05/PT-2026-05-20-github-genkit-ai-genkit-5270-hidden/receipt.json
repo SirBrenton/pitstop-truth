@@ -1,0 +1,101 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-05-20-github-genkit-ai-genkit-5270-hidden",
+  "created_at": "2026-05-20T00:00:00Z",
+  "source": {
+    "url": "https://github.com/genkit-ai/genkit/issues/5270",
+    "kind": "github_issue",
+    "repo": "genkit-ai/genkit",
+    "issue_or_pr": 5270,
+    "fix_pr": "https://github.com/genkit-ai/genkit/pull/5343",
+    "merge_commit": "c9b003a"
+  },
+  "signal_topology": {
+    "signal_origin": "provider",
+    "failure_layer": "runtime",
+    "decision_layer": "retry_logic",
+    "signal_failure_type": "hidden",
+    "downstream_effect": "retry_loop"
+  },
+  "hazard": {
+    "class": [
+      "rate_limit_429"
+    ],
+    "summary": "Provider Retry-After cooldown metadata was hidden across the framework error-propagation boundary, causing retry_loop inside the provider cooldown window",
+    "signals": [
+      "DEFAULT_RETRY_STATUSES includes RESOURCE_EXHAUSTED",
+      "Retry delay computation does not consult Retry-After header at any point",
+      "Anthropic returns retry-after: 60 on HTTP 429 responses",
+      "OpenAI and Gemini also emit Retry-After cooldown signals",
+      "Retry middleware schedules retries at initialDelayMs intervals inside the provider cooldown window",
+      "PR #5343 adds responseMetadata.retryAfterMs to GenkitError",
+      "PR #5343 updates retry middleware to use retryAfterMs as a retry delay floor",
+      "Fix propagates Retry-After metadata across Anthropic, OpenAI, and Gemini provider integrations"
+    ]
+  },
+  "constraints": [
+    "Retry logic must honor provider-declared cooldown metadata before issuing another request.",
+    "Provider cooldown signals must propagate across framework error boundaries in machine-readable form.",
+    "Retry middleware must not schedule a retry earlier than a server-declared Retry-After interval.",
+    "Retryability classification and retry timing semantics must remain coupled across propagation boundaries."
+  ],
+  "knobs": [
+    "provider_signal_propagation",
+    "retry_delay_flooring",
+    "retry_statuses",
+    "initial_delay_ms",
+    "error_metadata_transport"
+  ],
+  "verification": [
+    "Setup: surface an HTTP 429 with Retry-After: 60 through a provider adapter that maps the error into the retry middleware path. Action: execute the middleware with RESOURCE_EXHAUSTED in the retry set. Assertion: no retry is scheduled before 60000 ms elapses and computed retry delay is floored by Retry-After.",
+    "Setup: emit a retryable error without Retry-After metadata. Action: execute the middleware with the same retry configuration. Assertion: retry scheduling falls back to configured exponential backoff behavior.",
+    "Setup: trigger 429 responses from Anthropic, OpenAI, and Gemini integrations with Retry-After present. Action: inspect the propagated GenkitError passed into retry middleware. Assertion: responseMetadata.retryAfterMs is populated and consumed by retry scheduling.",
+    "Setup: trigger repeated 429 responses with Retry-After metadata present. Action: inspect retry scheduling behavior under sustained load. Assertion: retry attempts remain outside provider cooldown windows and retry budget is not exhausted inside the cooldown interval."
+  ],
+  "impact": {
+    "cost_channels": [
+      "latency",
+      "quota_burn",
+      "retry_amplification",
+      "workflow_failure"
+    ],
+    "operator_impact": "Operators see repeated retries during a provider-declared cooldown window even though recovery is not possible until the Retry-After interval expires.",
+    "business_consequence": "Framework users can waste retry budget and provider quota under sustained rate limiting, increasing latency and avoidable workflow failure."
+  },
+  "notes": "Confirmed: PR #5343 merged into main as commit c9b003a. The framework correctly classified the retryable condition as RESOURCE_EXHAUSTED but failed to preserve provider cooldown metadata across the GenkitError boundary into retry scheduling logic. The resulting failure was not retryability misclassification, but loss of retry timing semantics during framework error propagation. The fix introduced a dedicated responseMetadata.retryAfterMs propagation channel and updated retry middleware to treat provider Retry-After values as a minimum retry delay floor. The propagation model was implemented across Anthropic, OpenAI, and Gemini integrations. Schema note: the more precise topology precedent is middleware, but the current receipt.v0 schema does not yet allow middleware as a failure_layer enum, so this receipt uses runtime as the closest valid canonical layer.",
+  "tags": [
+    "genkit",
+    "middleware",
+    "retry",
+    "retry-after",
+    "rate-limit",
+    "anthropic",
+    "openai",
+    "gemini",
+    "error-propagation",
+    "framework"
+  ],
+  "mitigation_signature": {
+    "hazards": [
+      "hidden_retry_signal",
+      "signal_hidden_across_error_boundary"
+    ],
+    "constraints": [
+      "Provider cooldown metadata must remain visible to retry scheduling logic.",
+      "Retry delay must not precede provider-declared cooldown expiration.",
+      "Retryability classification and retry timing semantics must propagate together."
+    ],
+    "knobs": [
+      "provider_signal_propagation",
+      "retry_delay_flooring",
+      "error_metadata_transport",
+      "retry_statuses"
+    ],
+    "anti_patterns": [
+      "classifying retryability without propagating retry timing semantics",
+      "pure exponential backoff for 429 responses without Retry-After flooring",
+      "dropping provider cooldown metadata at framework error boundaries",
+      "retry scheduling inside provider cooldown windows"
+    ]
+  }
+}
