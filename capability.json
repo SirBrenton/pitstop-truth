@@ -1,12 +1,12 @@
 {
     "schema": "pitstop-capability.v0",
     "name": "pitstop-truth",
-    "version": "0.1.45",
+    "version": "0.1.46",
     "description": "Machine-readable corpus of AI/API execution failures and execution-shape anti-patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, concurrency amplification, mutation-density failures, shared-budget coordination failures, hidden retry-ownership failures, and hidden retry-visibility failures — classified, verified, and cross-referenced across production systems.",
     "capability": "execution_failure_classification",
     "thesis": "AI/API systems fail when execution signals or constraints are misclassified, hidden, omitted, scoped incorrectly, or owned by the wrong layer. The recurring result is retry amplification, false liveness, blocked failover, undefined client behavior, and avoidable cost under shared constraints.",
     "corpus": {
-        "receipts": 63,
+        "receipts": 64,
         "hazard_classes": [
             "rate_limit_429",
             "timeout_deadline",
@@ -52,11 +52,12 @@
             "openclaw/clawhub",
             "justlovemaki/AIClient2API",
             "garrytan/gstack",
-            "earendil-works/pi"
+            "earendil-works/pi",
+            "genkit-ai/genkit"
         ],
         "date_range": {
             "earliest": "2025-07-15",
-            "latest": "2026-05-14"
+            "latest": "2026-05-20"
         }
     },
     "query": {
@@ -619,6 +620,20 @@
             "fix": "Parse Retry-After per RFC 7231 (delta-seconds and HTTP-date). Cap honored waits at 60s. Skip leading exponential sleep on next iteration when Retry-After is honored. Fall back to exponential backoff only when header is absent.",
             "note": "Highest-profile confirmed fix in corpus. Merged by Garry Tan (YC co-founder) in GStack v1.30.0.0 as part of 21-PR community fix wave. Issue #1244 filed by SirBrenton with corpus reference. Fix implements RFC 7231 compliant parsing with double-wait prevention. Extends the pattern into AI coding agent skill execution and image generation batch workflows.",
             "signal_failure_type": "ignored"
+        }, 
+        {
+            "id": "provider-signal-hidden-across-runtime-boundary",
+            "hazard": "rate_limit_429",
+            "summary": "Provider cooldown or retry semantics are correctly emitted at the transport/provider layer but become hidden, dropped, or non-actionable across runtime abstraction boundaries before reaching retry or routing logic.",
+            "classification": "Hidden retry signal at execution boundary",
+            "confirmed_in": [
+                "genkit-ai/genkit",
+                "google/go-github",
+                "getcompanion-ai/feynman"
+            ],
+            "canonical_receipt": "PT-2026-05-20-github-genkit-ai-genkit-5270-hidden",
+            "fix": "Propagate retry timing and recovery semantics across serialization, runtime, and middleware boundaries in machine-readable form before retry or routing decisions execute.",
+            "note": "This extends the corpus beyond missing Retry-After handling into execution-boundary signal propagation failures."
         }
     ],
     "detection": {
@@ -648,7 +663,7 @@
     },
     "contact": "brent@pitstop.dev",
     "license": "Apache-2.0",
-    "last_updated": "2026-05-14",
+    "last_updated": "2026-05-20",
     "specs": {
         "taxonomy": "https://github.com/SirBrenton/pitstop-truth/blob/main/specs/EXECUTION_FAILURE_TAXONOMY_v1.md",
         "contract": "https://github.com/SirBrenton/pitstop-truth/blob/main/specs/EXECUTION_CONTRACT_v1.1.md"
