@@ -1,0 +1,96 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-05-22-github-voltagent-1276-retry-after-concurrency-amplification",
+  "created_at": "2026-05-22T00:00:00Z",
+  "source": {
+    "url": "https://github.com/VoltAgent/voltagent/issues/1276",
+    "kind": "github_issue",
+    "repo": "VoltAgent/voltagent",
+    "issue_or_pr": 1276
+  },
+  "signal_topology": {
+    "signal_origin": "provider",
+    "failure_layer": "runtime",
+    "decision_layer": "retry_logic",
+    "signal_failure_type": "ignored",
+    "downstream_effect": "retry_loop"
+  },
+  "hazard": {
+    "class": [
+      "rate_limit_429"
+    ],
+    "summary": "Framework retry logic ignored provider Retry-After semantics, causing coordinated retry amplification under shared provider contention.",
+    "signals": [
+      "agent.ts applies local exponential backoff for HTTP 429 responses without consulting Retry-After.",
+      "Math.min(1000 * 2 ** attempt, 10000)",
+      "Affected retry paths identified at lines 2039, 3267, and 5884.",
+      "isRetryableError() defaults to true, collapsing transient throttling and quota exhaustion into the same retry path.",
+      "Retry-After headers were available via responseHeaders but not consumed by retry scheduling logic.",
+      "PR #1283 adds Retry-After parsing and floors retry delay against provider cooldown hints.",
+      "Merged fix includes integration tests validating Retry-After: 30 schedules 30000 ms retry delay."
+    ]
+  },
+  "impact": {
+    "cost_channels": [
+      "quota_burn",
+      "retry_amplification",
+      "latency",
+      "workflow_failure",
+      "incident_risk"
+    ],
+    "operator_impact": "Under provider contention, independently-running agents converge retry windows and repeatedly re-enter the provider cooldown interval simultaneously, producing synchronized retry bursts and unstable runtime behavior.",
+    "business_consequence": "Framework-level retry amplification propagates automatically to downstream agents and workflows, increasing API spend, degrading latency, and creating cascading instability during provider stress or concurrency spikes."
+  },
+  "constraints": [
+    "Retry logic must honor provider Retry-After semantics before scheduling retries.",
+    "Framework retry layers must not collapse transient throttling and quota exhaustion into the same retry policy.",
+    "Shared-provider runtimes must disperse retry timing rather than synchronize retry windows under contention.",
+    "Provider cooldown metadata must survive into retry scheduling decisions."
+  ],
+  "knobs": [
+    "Retry-After parser",
+    "retry delay flooring",
+    "backoff strategy",
+    "retry jitter",
+    "429 classification policy",
+    "quota exhaustion handling",
+    "retry scheduling window"
+  ],
+  "verification": [
+    "Setup: Return HTTP 429 with Retry-After: 30 under concurrent multi-agent execution. Action: Trigger framework retry scheduling across multiple agents. Assertion: retries do not synchronize inside the provider cooldown window and no retry occurs before 30000 ms.",
+    "Setup: Simulate quota exhaustion and transient throttling responses separately. Action: Execute retry classification path. Assertion: quota exhaustion produces STOP behavior while transient throttling produces WAIT behavior.",
+    "Setup: Instrument retry scheduling before and after PR #1283. Action: Compare retry timing distributions under provider contention. Assertion: retry convergence decreases and retry timing disperses according to provider cooldown semantics."
+  ],
+  "notes": "Confirmed via merged PR #1283. The important failure mechanism was not merely Retry-After omission, but synchronized retry amplification emerging at framework scope under shared provider contention. The merged fix introduces Retry-After parsing, retry delay flooring, and validation tests.",
+  "tags": [
+    "voltagent",
+    "retry-after",
+    "rate-limit",
+    "retry-amplification",
+    "concurrency",
+    "framework-runtime",
+    "shared-provider-contention"
+  ],
+  "mitigation_signature": {
+    "hazards": [
+      "retry_after_ignored_under_concurrency",
+      "coordinated_retry_amplification"
+    ],
+    "constraints": [
+      "Retry scheduling must honor provider cooldown semantics.",
+      "Shared-provider retries must avoid synchronized retry convergence.",
+      "Quota exhaustion and transient throttling require distinct retry behavior."
+    ],
+    "knobs": [
+      "retry delay floor",
+      "retry jitter",
+      "Retry-After parsing",
+      "retry policy classification"
+    ],
+    "anti_patterns": [
+      "pure exponential backoff for 429 responses",
+      "collapsing quota exhaustion and transient throttling into one retry path",
+      "framework-wide synchronized retry scheduling under provider contention"
+    ]
+  }
+}

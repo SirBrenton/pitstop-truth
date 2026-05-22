@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-05-21T01:45:34Z",
+  "updated_at": "2026-05-22T20:52:36Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -1299,6 +1299,26 @@
         "error_metadata_transport"
       ],
       "path": "receipts/2026/05/PT-2026-05-20-github-genkit-ai-genkit-5270-hidden/receipt.json"
+    },
+    {
+      "id": "PT-2026-05-22-github-voltagent-1276-retry-after-concurrency-amplification",
+      "date": "2026-05-22",
+      "hazard_class": [
+        "rate_limit_429"
+      ],
+      "source_url": "https://github.com/VoltAgent/voltagent/issues/1276",
+      "repo": "VoltAgent/voltagent",
+      "signals": [
+        "agent.ts applies local exponential backoff for HTTP 429 responses without consulting Retry-After",
+        "isRetryableError() defaults to true, collapsing transient throttling and quota exhaustion into the same retry path",
+        "PR #1283 adds Retry-After parsing and floors retry delay against provider cooldown hints"
+      ],
+      "knobs": [
+        "Retry-After parser",
+        "retry delay flooring",
+        "retry jitter"
+      ],
+      "path": "receipts/2026/05/PT-2026-05-22-github-voltagent-1276-retry-after-concurrency-amplification/receipt.json"
     }
   ]
 }
