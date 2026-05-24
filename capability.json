@@ -1,12 +1,12 @@
 {
     "schema": "pitstop-capability.v0",
     "name": "pitstop-truth",
-    "version": "0.1.47",
+    "version": "0.1.48",
     "description": "Machine-readable corpus of AI/API execution failures and execution-shape anti-patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, concurrency amplification, mutation-density failures, shared-budget coordination failures, hidden retry-ownership failures, and hidden retry-visibility failures — classified, verified, and cross-referenced across production systems.",
     "capability": "execution_failure_classification",
     "thesis": "AI/API systems fail when execution signals or constraints are misclassified, hidden, omitted, scoped incorrectly, or owned by the wrong layer. The recurring result is retry amplification, false liveness, blocked failover, undefined client behavior, and avoidable cost under shared constraints.",
     "corpus": {
-        "receipts": 65,
+        "receipts": 66,
         "hazard_classes": [
             "rate_limit_429",
             "timeout_deadline",
@@ -54,11 +54,12 @@
             "garrytan/gstack",
             "earendil-works/pi",
             "genkit-ai/genkit",
-            "VoltAgent/voltagent"
+            "VoltAgent/voltagent",
+            "jo-inc/camofox-browser"
         ],
         "date_range": {
             "earliest": "2025-07-15",
-            "latest": "2026-05-22"
+            "latest": "2026-05-23"
         }
     },
     "query": {
@@ -636,6 +637,19 @@
             "canonical_receipt": "PT-2026-05-20-github-genkit-ai-genkit-5270-hidden",
             "fix": "Propagate retry timing and recovery semantics across serialization, runtime, and middleware boundaries in machine-readable form before retry or routing decisions execute.",
             "note": "This extends the corpus beyond missing Retry-After handling into execution-boundary signal propagation failures."
+        },
+        {
+            "id": "false-success-under-rate-limit",
+            "hazard": "rate_limit_429",
+            "summary": "A runtime treats upstream rate-limit rejection as successful completion, creating false delivery acknowledgement and silent degradation under throttling.",
+            "classification": "Upstream rejection overridden as success",
+            "confirmed_in": [
+            "jo-inc/camofox-browser"
+            ],
+            "canonical_receipt": "PT-2026-05-23-github-pr-camofox-3413-429-false-success",
+            "fix": "429 responses must preserve rejection semantics. Delivery acknowledgement must reflect actual upstream acceptance. Retry ownership may remain external, but success classification cannot override provider rejection.",
+            "note": "Extends the corpus beyond retry scheduling into execution truthfulness failures. The runtime preserved a never-throws contract but corrupted delivery semantics by treating provider rejection as success. This creates silent degradation, observability blindness, and hidden data loss under sustained throttling.",
+            "signal_failure_type": "overridden"
         }
     ],
     "detection": {
@@ -665,7 +679,7 @@
     },
     "contact": "brent@pitstop.dev",
     "license": "Apache-2.0",
-    "last_updated": "2026-05-22",
+    "last_updated": "2026-05-23",
     "specs": {
         "taxonomy": "https://github.com/SirBrenton/pitstop-truth/blob/main/specs/EXECUTION_FAILURE_TAXONOMY_v1.md",
         "contract": "https://github.com/SirBrenton/pitstop-truth/blob/main/specs/EXECUTION_CONTRACT_v1.1.md"
