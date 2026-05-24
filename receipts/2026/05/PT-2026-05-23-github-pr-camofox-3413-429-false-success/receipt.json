@@ -1,0 +1,104 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-05-23-github-pr-camofox-3413-429-false-success",
+  "created_at": "2026-05-23T00:00:00Z",
+
+  "source": {
+    "url": "https://github.com/jo-inc/camofox-browser/pull/3413",
+    "kind": "github_pr",
+    "repo": "jo-inc/camofox-browser",
+    "issue_or_pr": 3413
+  },
+
+  "hazard": {
+    "class": [
+      "rate_limit_429"
+    ],
+    "summary": "Runtime reporting path treated HTTP 429 as successful delivery, causing silent degradation under relay rate limiting.",
+
+    "signals": [
+      "sendToRelay returned true when relay responded with HTTP 429.",
+      "return resp.ok || resp.status === 429",
+      "429 responses were treated as accepted reports despite upstream rejection.",
+      "Crash reports could be silently dropped during relay rate limiting.",
+      "Merged fix changes behavior to return resp.ok only.",
+      "Fix preserves never-throws contract while restoring truthful delivery semantics."
+    ]
+  },
+
+  "signal_topology": {
+    "signal_origin": "provider",
+    "failure_layer": "runtime",
+    "decision_layer": "agent",
+    "signal_failure_type": "overridden",
+    "downstream_effect": "silent_degradation"
+  },
+
+  "impact": {
+    "cost_channels": [
+      "workflow_failure",
+      "operator_debug_time",
+      "incident_risk"
+    ],
+
+    "operator_impact": "Operators and downstream callers received successful delivery semantics while crash reports were silently rejected during relay rate limiting.",
+
+    "business_consequence": "Observability degraded invisibly under sustained relay throttling, increasing incident diagnosis difficulty and creating false confidence in crash-report persistence."
+  },
+
+  "constraints": [
+    "HTTP 429 must not be treated as successful upstream acceptance.",
+    "Delivery acknowledgement semantics must reflect actual upstream persistence state.",
+    "Runtime reporting paths must preserve truthful failure visibility during rate limiting.",
+    "Retry ownership must remain explicit when upstream acceptance fails."
+  ],
+
+  "knobs": [
+    "429 handling policy",
+    "success classification",
+    "delivery acknowledgement semantics",
+    "caller retry ownership"
+  ],
+
+  "verification": [
+    "Setup: Mock relay response returning HTTP 429. Action: Invoke sendToRelay. Assertion: function returns false rather than successful acknowledgement semantics.",
+    "Setup: Simulate sustained relay rate limiting during crash-report generation. Action: Inspect caller-visible success state. Assertion: rejected reports are surfaced as failed delivery rather than accepted persistence.",
+    "Setup: Instrument reporting behavior before and after PR #3413. Action: Trigger HTTP 429 responses from relay. Assertion: silent report loss no longer presents as successful delivery."
+  ],
+
+  "notes": "Confirmed via merged PR #3413 and downstream inclusion in release sync PR #4150. The dominant failure mechanism was false success acknowledgement: runtime logic overrode explicit upstream rejection semantics and reported successful delivery during HTTP 429 rate limiting.",
+
+  "tags": [
+    "camofox",
+    "relay",
+    "429",
+    "reporting",
+    "silent-degradation",
+    "runtime"
+  ],
+
+  "mitigation_signature": {
+    "hazards": [
+      "false_success_acknowledgement",
+      "silent_data_loss"
+    ],
+
+    "constraints": [
+      "429 responses must not imply successful persistence.",
+      "Delivery acknowledgement must reflect upstream acceptance state.",
+      "Failure visibility must survive runtime abstraction layers."
+    ],
+
+    "knobs": [
+      "success classification",
+      "429 policy",
+      "delivery acknowledgement semantics"
+    ],
+
+    "anti_patterns": [
+      "treating HTTP 429 as successful delivery",
+      "overriding upstream rejection semantics",
+      "silently acknowledging failed persistence operations"
+    ]
+  }
+}
