@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-05-22T20:52:36Z",
+  "updated_at": "2026-05-24T06:01:28Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -1319,6 +1319,26 @@
         "retry jitter"
       ],
       "path": "receipts/2026/05/PT-2026-05-22-github-voltagent-1276-retry-after-concurrency-amplification/receipt.json"
+    },
+    {
+      "id": "PT-2026-05-23-github-pr-camofox-3413-429-false-success",
+      "date": "2026-05-23",
+      "hazard_class": [
+        "rate_limit_429"
+      ],
+      "source_url": "https://github.com/jo-inc/camofox-browser/pull/3413",
+      "repo": "jo-inc/camofox-browser",
+      "signals": [
+        "sendToRelay returned true when relay responded with HTTP 429",
+        "return resp.ok || resp.status === 429",
+        "Merged fix changes behavior to return resp.ok only"
+      ],
+      "knobs": [
+        "429 handling policy",
+        "success classification",
+        "delivery acknowledgement semantics"
+      ],
+      "path": "receipts/2026/05/PT-2026-05-23-github-pr-camofox-3413-429-false-success/receipt.json"
     }
   ]
 }
