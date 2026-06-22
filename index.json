@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-05-24T06:01:28Z",
+  "updated_at": "2026-06-22T19:24:00Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -174,7 +174,7 @@
         "backoff_jitter",
         "retry_max_elapsed"
       ],
-      "path": "receipts/2026/02/PT-2026-02-25-github_issue-spotdl-429-retryafter-skipcheck/receipt.json"
+      "path": "receipts/2026/02/PT-2026-02-25-github-issue-spotdl-429-retryafter-skipcheck/receipt.json"
     },
     {
       "id": "PT-2026-02-25-github-issue-warden-groq-429-retry-after-ignored",
@@ -199,7 +199,7 @@
         "cooldown_key_scope",
         "retry_max_elapsed"
       ],
-      "path": "receipts/2026/02/PT-2026-02-25-github_issue-warden-groq-429-retry-after-ignored/receipt.json"
+      "path": "receipts/2026/02/PT-2026-02-25-github-issue-warden-groq-429-retry-after-ignored/receipt.json"
     },
     {
       "id": "PT-2025-12-13-github-issue-hedgehog-vlab-e1000-tx-hang-mitigation-drift",
@@ -223,6 +223,29 @@
         "ci_failfast_on_offload_mismatch"
       ],
       "path": "receipts/2025/12/PT-2025-12-13-github-issue-hedgehog-vlab-e1000-tx-hang-mitigation-drift/receipt.json"
+    },
+    {
+      "id": "PT-2026-02-26-github-issue-claude-code-25805-429-throughput-vs-quota",
+      "date": "2026-02-26",
+      "hazard_class": [
+        "rate_limit_429",
+        "rate_limit_taxonomy_ambiguous",
+        "throughput_vs_quota_confusion",
+        "insufficient_retry_guidance"
+      ],
+      "source_url": "https://github.com/anthropics/claude-code/issues/25805",
+      "repo": "anthropics/claude-code",
+      "signals": [
+        "User-reported: rate limit errors show \"API Error\"",
+        "Missing distinction: throughput (rpm/tpm) vs usage/quota",
+        "Missing/unclear retry semantics (Retry-After / backoff guidance)"
+      ],
+      "knobs": [
+        "concurrency_cap",
+        "backoff_base_ms",
+        "backoff_max_ms"
+      ],
+      "path": "receipts/2026/02/PT-2026-02-26-github-issue-claude-code-25805-429-throughput-vs-quota/receipt.json"
     },
     {
       "id": "PT-2026-03-19-github-issue-garmin-sso-429-edge-block-global",
@@ -278,7 +301,7 @@
       "source_url": "https://github.com/continuedev/continue/blob/main/core/util/withExponentialBackoff.ts",
       "repo": "continuedev/continue",
       "signals": [
-        "All 429s treated as retryable \u2014 CAP vs WAIT not distinguished",
+        "All 429s treated as retryable — CAP vs WAIT not distinguished",
         "429 handled without Retry-After"
       ],
       "knobs": [
@@ -298,7 +321,7 @@
       "repo": "vercel/ai",
       "signals": [
         "429 handled without Retry-After in gateway error type",
-        "Retry-After >60s falls back to exponential backoff \u2014 quota exhaustion misclassified as transient",
+        "Retry-After >60s falls back to exponential backoff — quota exhaustion misclassified as transient",
         "CAP vs WAIT not distinguished at error classification layer"
       ],
       "knobs": [
@@ -309,6 +332,26 @@
       "path": "receipts/2026/03/PT-2026-03-21-github-vercel-ai-sdk-429-retry-after-gap/receipt.json"
     },
     {
+      "id": "PT-2026-03-21-github-openclaw-venice-models-429-retry-after-unwired",
+      "date": "2026-03-21",
+      "hazard_class": [
+        "rate_limit_429"
+      ],
+      "source_url": "https://github.com/openclaw/openclaw/issues/49811",
+      "repo": "openclaw/openclaw",
+      "signals": [
+        "src/agents/venice-models.ts:24 — 429 handled without Retry-After",
+        "src/agents/venice-models.ts:24 — All 429s treated as retryable — CAP vs WAIT not distinguished",
+        "Retry-After: 600 returned by Venice API — client retries immediately on own schedule"
+      ],
+      "knobs": [
+        "retryAfterMs — callback that reads Retry-After header from error response",
+        "maxElapsedMs — hard cap on total retry window",
+        "shouldRetry — per-call-site classification of retryable vs terminal errors"
+      ],
+      "path": "receipts/2026/03/PT-2026-03-21-github-openclaw-venice-models-429-retry-after-unwired/receipt.json"
+    },
+    {
       "id": "PT-2026-03-22-github-hivemoot-agent-421-autonomous-taxonomy-convergence",
       "date": "2026-03-22",
       "hazard_class": [
@@ -317,7 +360,7 @@
       "source_url": "https://github.com/hivemoot/hivemoot-agent/issues/421",
       "repo": "hivemoot/hivemoot-agent",
       "signals": [
-        "429 treated identically to TerminalQuotaError \u2014 both receive 2h+ backoff floor",
+        "429 treated identically to TerminalQuotaError — both receive 2h+ backoff floor",
         "rate_limit_error Anthropic stream-json falls through to immediate retry unclassified",
         "multi-agent setup locks out all agents for hours on recoverable rate limit"
       ],
@@ -338,7 +381,7 @@
       "repo": "massgen/MassGen",
       "signals": [
         "429 with short Retry-After treated identically to quota exhaustion",
-        "STOP cases retried \u2014 burns budget in multi-agent orchestration",
+        "STOP cases retried — burns budget in multi-agent orchestration",
         "credit: @SirBrenton in PR description"
       ],
       "knobs": [
@@ -377,7 +420,7 @@
       "repo": "nicklvsa/claude-hud",
       "signals": [
         "5+ concurrent windows each polling usage API independently",
-        "per-instance backoff does not help \u2014 burst is additive across all instances",
+        "per-instance backoff does not help — burst is additive across all instances",
         "429 on usage display with no Retry-After header"
       ],
       "knobs": [
@@ -419,8 +462,8 @@
       "signals": [
         "anthropic-ratelimit-unified-overage-status: rejected",
         "overage-disabled-reason: org_level_disabled",
-        "session 0% weekly 11% but hard-blocked \u2014 dashboard does not show 5h window",
-        "60s backoff does not resolve \u2014 window reset takes ~4 hours"
+        "session 0% weekly 11% but hard-blocked — dashboard does not show 5h window",
+        "60s backoff does not resolve — window reset takes ~4 hours"
       ],
       "knobs": [
         "anthropic-ratelimit-unified-overage-status",
@@ -1089,7 +1132,7 @@
       "signals": [
         "retryDelay: (retryCount) => retryCount * 1000",
         "First retry delay is 0ms (0 * 1000)",
-        "HTTP-date format Retry-After was silently dropped via parseInt \u2192 NaN"
+        "HTTP-date format Retry-After was silently dropped via parseInt → NaN"
       ],
       "knobs": [
         "retryDelay function",
@@ -1180,7 +1223,7 @@
         "Retry-After handling",
         "CLI retry behavior"
       ],
-      "path": "receipts/2026/05/PT-2026-05-05-github-anthropics-claude-code-25805-429-signal-not-actionable/receipt.json"
+      "path": "receipts/2026/05/PT-2026-05-05-github-anthropics-claude-code-25805-signal-present-non-actionable/receipt.json"
     },
     {
       "id": "PT-2026-05-05-github-aiclient2api-576-retry-after-layer-divergence",
@@ -1241,24 +1284,24 @@
       "path": "receipts/2026/05/PT-2026-05-09-github-gstack-1244-generatevariant-retry-after-ignored/receipt.json"
     },
     {
-      "id": "",
-      "date": "",
+      "id": "PT-2026-05-12-github-gsd-5677-codex-retry-after-unwired",
+      "date": "2026-05-12",
       "hazard_class": [
         "rate_limit_429"
       ],
       "source_url": "https://github.com/gsd-build/gsd-2/issues/5677",
       "repo": "gsd-build/gsd-2",
       "signals": [
-        "openai-codex-responses.ts uses pure exponential backoff for 429 responses",
-        "Gemini provider in the same repo handles Retry-After correctly",
-        "Retry-After: 60 consumed inside cooldown window"
+        "openai-codex-responses.ts uses pure exponential backoff for 429 responses — 1s, 2s, 4s — with no Retry-After header consulted.",
+        "The Gemini provider in the same repo handles this correctly: reads Retry-After, HTTP-date format, body patterns, and retryDelay JSON field.",
+        "When OpenAI returns Retry-After: 60, all three retries fire inside the cooldown window and fail. Retry budget exhausted. Agent run stalls."
       ],
       "knobs": [
         "Retry-After parser",
-        "fallback exponential backoff schedule",
+        "HTTP-date Retry-After parser",
         "provider retry delay calculator"
       ],
-      "path": "receipts/2026/05//receipt.json"
+      "path": "receipts/2026/05/PT-2026-05-12-github-gsd-5677-codex-retry-after-unwired/receipt.json"
     },
     {
       "id": "PT-2026-05-14-github-pi-4377-codex-429-5xx-collapse",
@@ -1339,6 +1382,30 @@
         "delivery acknowledgement semantics"
       ],
       "path": "receipts/2026/05/PT-2026-05-23-github-pr-camofox-3413-429-false-success/receipt.json"
+    },
+    {
+      "id": "PT-2026-06-22-github-pr-langchainjs-10674-429-taxonomy-adoption",
+      "date": "2026-06-22",
+      "hazard_class": [
+        "rate_limit_429",
+        "error_misclassification",
+        "retry_after_ignored",
+        "retry_amplification",
+        "provider_signal_hidden"
+      ],
+      "source_url": "https://github.com/langchain-ai/langchainjs/pull/10674",
+      "repo": "langchain-ai/langchainjs",
+      "signals": [
+        "PR #10674 fixes issue #10566",
+        "Shared AsyncCaller classifies provider 429s before retry",
+        "Merged as f017708 with 37 checks passing"
+      ],
+      "knobs": [
+        "retry_after_floor_ms",
+        "quota_message_patterns",
+        "shared_async_caller_routing"
+      ],
+      "path": "receipts/2026/06/PT-2026-06-22-github-pr-langchainjs-10674-429-taxonomy-adoption/receipt.json"
     }
   ]
 }

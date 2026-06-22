@@ -1,0 +1,124 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-06-22-github-pr-langchainjs-10674-429-taxonomy-adoption",
+  "created_at": "2026-06-22T19:04:18Z",
+  "source": {
+    "url": "https://github.com/langchain-ai/langchainjs/pull/10674",
+    "kind": "github_pr",
+    "repo": "langchain-ai/langchainjs",
+    "issue_or_pr": 10674,
+    "originating_issue_url": "https://github.com/langchain-ai/langchainjs/issues/10566",
+    "originating_issue_or_pr": 10566,
+    "merge_commit": "f017708",
+    "merged_at": "2026-06-22",
+    "merged_checks_passed": 37,
+    "fixes_issue": 10566,
+    "implementation_owner": "langchain-ai maintainer"
+  },
+  "hazard": {
+    "class": [
+      "rate_limit_429",
+      "error_misclassification",
+      "retry_after_ignored",
+      "retry_amplification",
+      "provider_signal_hidden"
+    ],
+    "summary": "Provider-specific 429 timing and quota semantics were flattened or hidden before shared retry selection, causing transient pressure, capacity pressure, and terminal quota exhaustion to enter materially similar retry behavior.",
+    "signals": [
+      "Issue #10566 identified inconsistent 429 handling across Anthropic, OpenAI, Google, and OpenRouter provider paths.",
+      "The issue distinguished WAIT (short retry hint), CAP (capacity or concurrency pressure), and STOP (quota or billing exhaustion).",
+      "PR #10674 explicitly states that it fixes issue #10566 by classifying provider 429 responses before retrying.",
+      "Shared classification was added to AsyncCaller using status/statusCode, Retry-After, provider messages, and OpenAI-style insufficient_quota signals.",
+      "Legacy Google and OpenRouter request paths were routed through the shared caller.",
+      "OpenRouter typed errors were changed to preserve response status and header metadata needed by the shared classifier.",
+      "The merged behavior retries short explicit waits with backoff floors, surfaces headerless 429s as capacity pressure, and fails fast on quota or billing exhaustion.",
+      "PR #10674 merged into main as f017708 with 37 checks passing."
+    ]
+  },
+  "mitigation_signature": {
+    "hazards": [
+      "429_semantic_collapse",
+      "retry_after_signal_loss",
+      "quota_exhaustion_retried",
+      "provider_path_policy_divergence"
+    ],
+    "constraints": [
+      "Classify 429 semantics before selecting retry behavior.",
+      "Preserve status, headers, body semantics, and typed error metadata across provider adapter boundaries.",
+      "All provider paths that rely on shared retry policy must route through the shared classification primitive.",
+      "Terminal quota or billing exhaustion must not enter a retry loop."
+    ],
+    "knobs": [
+      "retry_after_floor_ms",
+      "quota_message_patterns",
+      "max_retries",
+      "max_elapsed_ms",
+      "provider_metadata_preservation",
+      "shared_async_caller_routing"
+    ],
+    "anti_patterns": [
+      "all_429s_retryable",
+      "provider_path_bypasses_shared_classifier",
+      "typed_error_drops_headers",
+      "quota_exhaustion_enters_backoff",
+      "headerless_429_blind_retry"
+    ]
+  },
+  "impact": {
+    "cost_channels": [
+      "api_spend",
+      "latency",
+      "workflow_failure",
+      "quota_burn",
+      "retry_amplification",
+      "incident_risk"
+    ],
+    "operator_impact": "Operators can observe repeated retries, delayed recovery, or failed fallback when the runtime lacks the provider timing and exhaustion semantics needed to select the next action.",
+    "business_consequence": "Incorrect shared retry behavior can amplify provider pressure, consume retry and quota budgets, increase latency, and delay useful failover across downstream LangChain applications. No quantified LangChain.js production loss is claimed by this receipt."
+  },
+  "constraints": [
+    "Classify provider 429 semantics before retry logic executes.",
+    "Preserve Retry-After, status/statusCode, typed error metadata, and quota-message semantics across provider boundaries.",
+    "Treat short explicit Retry-After values as minimum backoff floors rather than discarding them.",
+    "Do not blindly auto-retry headerless 429 responses; surface capacity pressure for an explicit routing or concurrency decision.",
+    "Quota, billing, and insufficient_quota conditions must fail fast rather than enter retry scheduling.",
+    "Sibling provider integrations must use the shared retry classification path or preserve equivalent semantics."
+  ],
+  "knobs": [
+    "retry_after_floor_ms",
+    "max_retries",
+    "max_elapsed_ms",
+    "quota_message_patterns",
+    "capacity_pressure_policy",
+    "provider_metadata_preservation",
+    "shared_async_caller_routing"
+  ],
+  "verification": [
+    "Confirm issue #10566 is closed by merged PR #10674.",
+    "Confirm PR #10674 merged into langchain-ai/langchainjs main as commit f017708 on 2026-06-22.",
+    "Verify shared AsyncCaller classification considers status/statusCode, Retry-After, provider quota or billing messages, and insufficient_quota.",
+    "Verify Google and OpenRouter request paths route through the shared caller.",
+    "Verify OpenRouter typed errors preserve status and header metadata required by the shared classifier.",
+    "Verify short explicit retry hints continue with a backoff floor, headerless 429s are not blindly auto-retried, and quota or billing 429s fail fast.",
+    "Confirm the merge reported 37 passing checks."
+  ],
+  "notes": "Issue #10566 used a separate live system's 90+ retry behavior and failed fallback as motivating evidence. The LangChain.js failure shape itself was established through static source analysis and subsequent maintainer acceptance and implementation; this receipt does not claim that the 90+ retry sequence was reproduced inside LangChain.js. The artifact documents external adoption of the WAIT/CAP/STOP-style semantic distinction and its implementation in shared framework runtime code, not quantified production impact.",
+  "tags": [
+    "langchainjs",
+    "429",
+    "retry-after",
+    "wait-cap-stop",
+    "taxonomy-adoption",
+    "shared-retry",
+    "external-adoption",
+    "provider-boundary"
+  ],
+  "signal_failure_type": "hidden",
+  "signal_topology": {
+    "signal_origin": "provider",
+    "failure_layer": "runtime",
+    "decision_layer": "retry_logic",
+    "signal_failure_type": "hidden",
+    "downstream_effect": "retry_loop"
+  }
+}
