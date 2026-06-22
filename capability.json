@@ -1,12 +1,12 @@
 {
     "schema": "pitstop-capability.v0",
     "name": "pitstop-truth",
-    "version": "0.1.48",
+    "version": "0.1.49",
     "description": "Machine-readable corpus of AI/API execution failures and execution-shape anti-patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, concurrency amplification, mutation-density failures, shared-budget coordination failures, hidden retry-ownership failures, and hidden retry-visibility failures — classified, verified, and cross-referenced across production systems.",
     "capability": "execution_failure_classification",
     "thesis": "AI/API systems fail when execution signals or constraints are misclassified, hidden, omitted, scoped incorrectly, or owned by the wrong layer. The recurring result is retry amplification, false liveness, blocked failover, undefined client behavior, and avoidable cost under shared constraints.",
     "corpus": {
-        "receipts": 66,
+        "receipts": 67,
         "hazard_classes": [
             "rate_limit_429",
             "timeout_deadline",
@@ -55,11 +55,12 @@
             "earendil-works/pi",
             "genkit-ai/genkit",
             "VoltAgent/voltagent",
-            "jo-inc/camofox-browser"
+            "jo-inc/camofox-browser",
+            "langchain-ai/langchainjs"
         ],
         "date_range": {
             "earliest": "2025-07-15",
-            "latest": "2026-05-23"
+            "latest": "2026-06-22"
         }
     },
     "query": {
@@ -80,7 +81,8 @@
                 "zulip/zulip",
                 "vercel/ai",
                 "earendil-works/pi",
-                "VoltAgent/voltagent"
+                "VoltAgent/voltagent",
+                "langchain-ai/langchainjs"
             ],
             "canonical_receipt": "PT-2026-03-21-github-openclaw-venice-models-429-retry-after-unwired",
             "fix": "Consult Retry-After header before retrying. Use header value as floor for retry delay."
@@ -93,7 +95,8 @@
             "confirmed_in": [
                 "openclaw/openclaw",
                 "continuedev/continue",
-                "gsd-build/gsd-2"
+                "gsd-build/gsd-2",
+                "langchain-ai/langchainjs"
             ],
             "canonical_receipt": "PT-2026-03-21-github-continue-dev-429-cap-wait-missing",
             "fix": "Wire retryAfterMs at every call site that handles 429 responses."
@@ -138,7 +141,8 @@
             "summary": "WAIT/CAP/STOP classification adopted as production implementation in LLM API circuit breaker within 4 hours of first contact. First external validation that the taxonomy is immediately actionable by engineers solving real agent reliability problems.",
             "classification": "External adoption — taxonomy → production code",
             "confirmed_in": [
-                "massgen/MassGen"
+                "massgen/MassGen",
+                "langchain-ai/langchainjs"
             ],
             "canonical_receipt": "PT-2026-03-23-github-massgen-1024-wait-cap-stop-circuit-breaker-adoption",
             "fix": "429 responses must be classified before any circuit breaker or enforcement decision runs. STOP forces CB open immediately. WAIT does not increment failure counter. CAP reduces concurrency before retry.",
@@ -623,7 +627,7 @@
             "fix": "Parse Retry-After per RFC 7231 (delta-seconds and HTTP-date). Cap honored waits at 60s. Skip leading exponential sleep on next iteration when Retry-After is honored. Fall back to exponential backoff only when header is absent.",
             "note": "Highest-profile confirmed fix in corpus. Merged by Garry Tan (YC co-founder) in GStack v1.30.0.0 as part of 21-PR community fix wave. Issue #1244 filed by SirBrenton with corpus reference. Fix implements RFC 7231 compliant parsing with double-wait prevention. Extends the pattern into AI coding agent skill execution and image generation batch workflows.",
             "signal_failure_type": "ignored"
-        }, 
+        },
         {
             "id": "provider-signal-hidden-across-runtime-boundary",
             "hazard": "rate_limit_429",
@@ -644,7 +648,7 @@
             "summary": "A runtime treats upstream rate-limit rejection as successful completion, creating false delivery acknowledgement and silent degradation under throttling.",
             "classification": "Upstream rejection overridden as success",
             "confirmed_in": [
-            "jo-inc/camofox-browser"
+                "jo-inc/camofox-browser"
             ],
             "canonical_receipt": "PT-2026-05-23-github-pr-camofox-3413-429-false-success",
             "fix": "429 responses must preserve rejection semantics. Delivery acknowledgement must reflect actual upstream acceptance. Retry ownership may remain external, but success classification cannot override provider rejection.",
