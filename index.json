@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-06-22T19:24:00Z",
+  "updated_at": "2026-06-30T00:47:37Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -1406,6 +1406,30 @@
         "shared_async_caller_routing"
       ],
       "path": "receipts/2026/06/PT-2026-06-22-github-pr-langchainjs-10674-429-taxonomy-adoption/receipt.json"
+    },
+    {
+      "id": "PT-2026-06-28-github-pr-dexter-281-x-reset-false-terminal",
+      "date": "2026-06-28",
+      "hazard_class": [
+        "rate_limit_429",
+        "provider_reset_signal_ignored",
+        "recoverable_failure_treated_as_terminal"
+      ],
+      "source_url": "https://github.com/virattt/dexter/pull/281",
+      "repo": "virattt/dexter",
+      "signals": [
+        "xApiGet parsed X-Rate-Limit-Reset but threw immediately on HTTP 429",
+        "PR #281 retries up to three times when the reset wait is 60 seconds or less",
+        "Tests cover retry success, retry exhaustion, and over-cap fast-fail"
+      ],
+      "knobs": [
+        "max_rate_limit_retries",
+        "max_rate_limit_wait_ms",
+        "x_rate_limit_reset_parser",
+        "pagination_resume_state",
+        "over_cap_failure_policy"
+      ],
+      "path": "receipts/2026/06/PT-2026-06-28-github-pr-dexter-281-x-reset-false-terminal/receipt.json"
     }
   ]
 }
