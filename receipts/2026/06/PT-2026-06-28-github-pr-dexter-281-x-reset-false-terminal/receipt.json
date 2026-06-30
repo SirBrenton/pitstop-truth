@@ -1,0 +1,106 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-06-28-github-pr-dexter-281-x-reset-false-terminal",
+  "created_at": "2026-06-30T00:47:29Z",
+  "source": {
+    "url": "https://github.com/virattt/dexter/pull/281",
+    "kind": "github_pr",
+    "repo": "virattt/dexter",
+    "issue_or_pr": 281,
+    "issue_url": "https://github.com/virattt/dexter/issues/246",
+    "issue_number": 246,
+    "merged_at": "2026-06-28"
+  },
+  "hazard": {
+    "class": [
+      "rate_limit_429",
+      "provider_reset_signal_ignored",
+      "recoverable_failure_treated_as_terminal"
+    ],
+    "summary": "An X API 429 supplied X-Rate-Limit-Reset timing that the client parsed but ignored at the retry boundary, converting recoverable WAIT into terminal pagination failure.",
+    "signals": [
+      "xApiGet reads x-rate-limit-reset and computes waitSec on HTTP 429",
+      "Pre-fix control flow throws immediately after computing the provider reset interval",
+      "A 429 during a multi-page search terminates the current run instead of waiting and resuming",
+      "PR #281 adds up to three retries when the computed reset wait is 60000 ms or less",
+      "PR #281 tests retry success, retry exhaustion, and over-cap fast-fail behavior"
+    ]
+  },
+  "mitigation_signature": {
+    "hazards": [
+      "rate_limit_429",
+      "provider_reset_signal_ignored",
+      "recoverable_failure_treated_as_terminal"
+    ],
+    "constraints": [
+      "Provider reset timing must reach the retry decision boundary",
+      "Recoverable WAIT conditions must not become terminal while bounded retry remains available",
+      "Retry count and total wait duration must be explicitly bounded",
+      "Pagination state must survive a bounded rate-limit wait"
+    ],
+    "knobs": [
+      "max_rate_limit_retries",
+      "max_rate_limit_wait_ms",
+      "x_rate_limit_reset_parser",
+      "pagination_resume_state",
+      "over_cap_failure_policy"
+    ],
+    "anti_patterns": [
+      "parse_reset_then_throw",
+      "recoverable_429_as_terminal",
+      "unbounded_rate_limit_sleep",
+      "pagination_abort_on_transient_pressure"
+    ]
+  },
+  "routing_impact": {
+    "default_action": "retry_with_budget",
+    "cooldown_source": "server_hint"
+  },
+  "impact": {
+    "cost_channels": [
+      "workflow_failure",
+      "quota_burn",
+      "operator_debug_time"
+    ],
+    "operator_impact": "A multi-page search stops at the first recoverable 429 and cannot continue within the current run despite an available provider reset signal.",
+    "business_consequence": "Restarting or abandoning larger searches can consume additional API quota, compute time, and operator effort."
+  },
+  "constraints": [
+    "The provider-declared reset interval must participate in the retry decision rather than being parsed and discarded.",
+    "A transient HTTP 429 must not be converted into terminal failure while a bounded retry remains within the local execution budget.",
+    "Rate-limit waiting must be bounded by both an attempt limit and a maximum permitted wait duration.",
+    "The same paginated request must resume after an accepted reset wait so progress is not discarded.",
+    "When the provider reset interval exceeds the local wait budget, execution must fail without sleeping or issuing another request."
+  ],
+  "knobs": [
+    "max_rate_limit_retries",
+    "max_rate_limit_wait_ms",
+    "x_rate_limit_reset_parser",
+    "pagination_resume_state",
+    "over_cap_failure_policy"
+  ],
+  "verification": [
+    "Return HTTP 429 with X-Rate-Limit-Reset approximately one second ahead, then HTTP 200; verify exactly two calls occur and the successful response is returned.",
+    "Return HTTP 429 repeatedly with reset intervals inside the local wait cap; verify the initial request plus three retries occur before terminal failure.",
+    "Return HTTP 429 with a reset interval above 60000 ms; verify the client does not sleep, does not retry, and surfaces the rate-limit failure.",
+    "Run the upstream unit suite and TypeScript type check to ensure the retry behavior does not regress surrounding X search execution."
+  ],
+  "notes": "Evidence class: maintainer-validated reachable failure. Issue #246 was surfaced from the executable code path using Pitstop Scanner; PR #281 independently confirmed the defect, added bounded recovery, and was merged by the repository owner. No measured production outage or quantified user impact is claimed. The merged fix retries at most three times and only when the computed reset wait is 60 seconds or less; longer reset windows fail fast.",
+  "tags": [
+    "x-api",
+    "rate-limit",
+    "reset-header",
+    "pagination",
+    "bounded-retry",
+    "false-terminal",
+    "maintainer-validated"
+  ],
+  "signal_failure_type": "ignored",
+  "signal_topology": {
+    "signal_origin": "provider",
+    "failure_layer": "runtime",
+    "decision_layer": "retry_logic",
+    "signal_failure_type": "ignored",
+    "downstream_effect": "false_terminal"
+  }
+}
