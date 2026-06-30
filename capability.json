@@ -1,25 +1,31 @@
 {
     "schema": "pitstop-capability.v0",
     "name": "pitstop-truth",
-    "version": "0.1.49",
+    "version": "0.1.50",
     "description": "Machine-readable corpus of AI/API execution failures and execution-shape anti-patterns. Structured receipts for retry storms, 429 misclassification, timeout cascades, concurrency amplification, mutation-density failures, shared-budget coordination failures, hidden retry-ownership failures, and hidden retry-visibility failures — classified, verified, and cross-referenced across production systems.",
     "capability": "execution_failure_classification",
     "thesis": "AI/API systems fail when execution signals or constraints are misclassified, hidden, omitted, scoped incorrectly, or owned by the wrong layer. The recurring result is retry amplification, false liveness, blocked failover, undefined client behavior, and avoidable cost under shared constraints.",
     "corpus": {
-        "receipts": 67,
+        "receipts": 68,
         "hazard_classes": [
             "rate_limit_429",
             "timeout_deadline",
             "retry_budget_exhausted"
         ],
         "repos_analyzed": [
+            "pulumi/pulumi-azure-native",
+            "cockroachdb/cockroach",
+            "githedgehog/fabricator",
+            "sipeed/picoclaw",
+            "olaoluthomas/timezone-app",
+            "n8n-io/n8n",
             "openclaw/openclaw",
-            "continuedev/continue",
-            "BerriAI/litellm",
-            "zulip/zulip",
-            "vercel/ai",
+            "spotDL/spotify-downloader",
+            "alperduzgun/warden-core",
             "anthropics/claude-code",
-            "svix/svix-webhooks",
+            "matin/garth",
+            "continuedev/continue",
+            "vercel/ai",
             "hivemoot/hivemoot-agent",
             "massgen/MassGen",
             "nicklvsa/claude-hud",
@@ -27,9 +33,11 @@
             "can1357/oh-my-pi",
             "code-yeongyu/oh-my-openagent",
             "agentgateway/agentgateway",
+            "opencode-ai/opencode",
             "anomalyco/opencode",
             "hiero-ledger/solo",
             "HKUDS/nanobot",
+            "logfwd/logfwd",
             "github/copilot-cli",
             "TalonT-Org/AutoSkillit",
             "mozilla/sccache",
@@ -41,7 +49,6 @@
             "DataBiosphere/azul",
             "adcontextprotocol/adcp",
             "kirodotdev/Kiro",
-            "logfwd/logfwd",
             "lizhelang/codexbar",
             "google/go-github",
             "TauricResearch/TradingAgents",
@@ -56,11 +63,12 @@
             "genkit-ai/genkit",
             "VoltAgent/voltagent",
             "jo-inc/camofox-browser",
-            "langchain-ai/langchainjs"
+            "langchain-ai/langchainjs",
+            "virattt/dexter"
         ],
         "date_range": {
             "earliest": "2025-07-15",
-            "latest": "2026-06-22"
+            "latest": "2026-06-28"
         }
     },
     "query": {
@@ -515,14 +523,15 @@
         {
             "id": "provider-reset-after-ignored-by-retry-scheduler",
             "hazard": "rate_limit_429",
-            "summary": "Provider quota reset timing is emitted in the error response, but the retry scheduler uses generic exponential backoff instead of waiting until the declared reset time. The client retries before recovery is possible and sustains a rate-limit loop.",
-            "classification": "Provider reset signal ignored at retry boundary",
+            "summary": "Provider quota reset timing is emitted or parsed, but does not govern the retry decision. The client either retries before recovery is possible or terminates recoverable work instead of waiting within an explicit execution budget.",
+            "classification": "Provider reset signal ignored at retry decision boundary",
             "confirmed_in": [
-                "google-gemini/gemini-cli"
+                "google-gemini/gemini-cli",
+                "virattt/dexter"
             ],
             "canonical_receipt": "PT-2026-04-27-github-google-gemini-gemini-cli-23738-reset-after-ignored-retry-loop",
-            "fix": "Parse provider reset timing from the 429 response and use it as the minimum retry delay. Do not schedule retries before the provider-declared reset window expires.",
-            "note": "Distinct from header-only Retry-After handling: the actionable reset signal appears in provider error text such as 'Your quota will reset after 43s' and must still inform retry scheduling."
+            "fix": "Parse provider reset timing and make it authoritative at the retry boundary. Wait until reset when the delay remains within the local execution budget; otherwise surface explicit budget preemption or defer/resume instead of retrying early or treating recoverable WAIT as terminal.",
+            "note": "Gemini CLI demonstrates the premature-retry branch: generic backoff fires before provider recovery. Dexter demonstrates the opposite false-terminal branch: reset timing is parsed, but recoverable pagination is terminated. Together they show that parsing recovery timing is insufficient unless it governs the execution decision and remains bounded by local retry and elapsed-time policy."
         },
         {
             "id": "sdk-cli-retry-implementation-divergence",
@@ -683,7 +692,7 @@
     },
     "contact": "brent@pitstop.dev",
     "license": "Apache-2.0",
-    "last_updated": "2026-05-23",
+    "last_updated": "2026-06-30",
     "specs": {
         "taxonomy": "https://github.com/SirBrenton/pitstop-truth/blob/main/specs/EXECUTION_FAILURE_TAXONOMY_v1.md",
         "contract": "https://github.com/SirBrenton/pitstop-truth/blob/main/specs/EXECUTION_CONTRACT_v1.1.md"
