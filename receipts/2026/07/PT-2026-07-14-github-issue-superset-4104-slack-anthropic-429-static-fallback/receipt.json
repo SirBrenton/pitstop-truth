@@ -1,0 +1,108 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-07-14-github-issue-superset-4104-slack-anthropic-429-static-fallback",
+  "created_at": "2026-07-14T00:00:00Z",
+  "source": {
+    "url": "https://github.com/superset-sh/superset/issues/4104",
+    "kind": "github_issue",
+    "repo": "superset-sh/superset",
+    "issue_or_pr": 4104
+  },
+  "hazard": {
+    "class": [
+      "rate_limit_429"
+    ],
+    "summary": "Slack agent converts Anthropic 429 Retry-After into a static user-visible failure despite same-repo SDK retry behavior.",
+    "signals": [
+      "Anthropic.APIError status === 429",
+      "Slack agent returns static overload message",
+      "Retry-After not inspected at Slack agent call site",
+      "SDK client in same repository parses retry-after seconds and HTTP-date formats",
+      "static fallback occurs before retry budget exhaustion"
+    ]
+  },
+  "constraints": [
+    "Provider-supplied Retry-After must be inspected before a user-facing fallback is returned.",
+    "Retry-After parsing must support both delta-seconds and HTTP-date formats.",
+    "Correct retry primitives must be reused consistently across sibling callers in the same runtime.",
+    "A static overload message may only be returned after bounded retry budget exhaustion.",
+    "A provider WAIT signal must survive adapter boundaries in machine-actionable form."
+  ],
+  "knobs": [
+    "retry_after_floor_ms",
+    "retry_budget_max_attempts",
+    "retry_budget_max_elapsed_ms",
+    "retry_after_http_date_parser",
+    "static_fallback_after_retry_exhaustion",
+    "adapter_sdk_retry_reuse"
+  ],
+  "verification": [
+    "Add a unit test that simulates Anthropic 429 with Retry-After: 3 and asserts the Slack agent waits/retries before returning fallback.",
+    "Add a unit test that simulates Anthropic 429 with Retry-After as an HTTP-date and asserts equivalent wait parsing.",
+    "Add a retry-exhaustion test proving the static overload message is returned only after retry budget is exhausted.",
+    "Run a static search for Anthropic 429 handlers that return fallback text without inspecting Retry-After.",
+    "Run an integration test with a mocked Slack event where the first Anthropic call returns 429 + Retry-After and the second call succeeds."
+  ],
+  "tags": [
+    "github_issue",
+    "rate_limit",
+    "retry_after",
+    "anthropic",
+    "slack_agent",
+    "correct_primitive_unwired_callers",
+    "wait_signal_ignored"
+  ],
+  "signal_failure_type": "ignored",
+  "signal_topology": {
+    "signal_origin": "provider",
+    "failure_layer": "runtime",
+    "decision_layer": "agent",
+    "signal_failure_type": "ignored",
+    "downstream_effect": "false_terminal"
+  },
+  "mitigation_signature": {
+    "hazards": [
+      "rate_limit_429"
+    ],
+    "constraints": [
+      "Honor provider Retry-After before fallback.",
+      "Reuse correct retry primitives across sibling callers.",
+      "Return static fallback only after bounded retry exhaustion."
+    ],
+    "knobs": [
+      "retry_after_floor_ms",
+      "retry_budget_max_attempts",
+      "retry_budget_max_elapsed_ms"
+    ],
+    "anti_patterns": [
+      "correct_primitive_unwired_callers",
+      "static_fallback_before_retry_budget_exhaustion",
+      "adapter_bypasses_sdk_retry_primitive"
+    ]
+  },
+  "routing_impact": {
+    "default_action": "retry_with_budget",
+    "cooldown_source": "retry_after_header",
+    "cooldown_scope_key": "anthropic_provider_slack_agent",
+    "during_cooldown": {
+      "make_http_call": false,
+      "eligible_for_routing": false,
+      "emit_decision_event": true
+    },
+    "after_cooldown": {
+      "probe_strategy": "single_flight",
+      "max_probe_qps": 1
+    }
+  },
+  "impact": {
+    "cost_channels": [
+      "customer_visible_failure",
+      "quota_burn",
+      "retry_amplification",
+      "support_escalation"
+    ],
+    "operator_impact": "A recoverable provider-side WAIT signal is presented as a failed Slack interaction, causing users or operators to retry manually.",
+    "business_consequence": "Avoidable user-visible failures and manual retry amplification under provider capacity pressure."
+  },
+  "notes": "Public issue was closed as part of a stale-issue sweep, not as an explicit technical rejection. Treat this receipt as candidate-quality until current main branch verification confirms the Slack agent path still bypasses Retry-After or a merged patch verifies the mitigation. Pattern match: correct-primitive-unwired-callers."
+}
