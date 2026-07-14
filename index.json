@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-06-30T00:47:37Z",
+  "updated_at": "2026-07-14T22:51:58Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -301,7 +301,7 @@
       "source_url": "https://github.com/continuedev/continue/blob/main/core/util/withExponentialBackoff.ts",
       "repo": "continuedev/continue",
       "signals": [
-        "All 429s treated as retryable — CAP vs WAIT not distinguished",
+        "All 429s treated as retryable \u2014 CAP vs WAIT not distinguished",
         "429 handled without Retry-After"
       ],
       "knobs": [
@@ -321,7 +321,7 @@
       "repo": "vercel/ai",
       "signals": [
         "429 handled without Retry-After in gateway error type",
-        "Retry-After >60s falls back to exponential backoff — quota exhaustion misclassified as transient",
+        "Retry-After >60s falls back to exponential backoff \u2014 quota exhaustion misclassified as transient",
         "CAP vs WAIT not distinguished at error classification layer"
       ],
       "knobs": [
@@ -340,14 +340,14 @@
       "source_url": "https://github.com/openclaw/openclaw/issues/49811",
       "repo": "openclaw/openclaw",
       "signals": [
-        "src/agents/venice-models.ts:24 — 429 handled without Retry-After",
-        "src/agents/venice-models.ts:24 — All 429s treated as retryable — CAP vs WAIT not distinguished",
-        "Retry-After: 600 returned by Venice API — client retries immediately on own schedule"
+        "src/agents/venice-models.ts:24 \u2014 429 handled without Retry-After",
+        "src/agents/venice-models.ts:24 \u2014 All 429s treated as retryable \u2014 CAP vs WAIT not distinguished",
+        "Retry-After: 600 returned by Venice API \u2014 client retries immediately on own schedule"
       ],
       "knobs": [
-        "retryAfterMs — callback that reads Retry-After header from error response",
-        "maxElapsedMs — hard cap on total retry window",
-        "shouldRetry — per-call-site classification of retryable vs terminal errors"
+        "retryAfterMs \u2014 callback that reads Retry-After header from error response",
+        "maxElapsedMs \u2014 hard cap on total retry window",
+        "shouldRetry \u2014 per-call-site classification of retryable vs terminal errors"
       ],
       "path": "receipts/2026/03/PT-2026-03-21-github-openclaw-venice-models-429-retry-after-unwired/receipt.json"
     },
@@ -360,7 +360,7 @@
       "source_url": "https://github.com/hivemoot/hivemoot-agent/issues/421",
       "repo": "hivemoot/hivemoot-agent",
       "signals": [
-        "429 treated identically to TerminalQuotaError — both receive 2h+ backoff floor",
+        "429 treated identically to TerminalQuotaError \u2014 both receive 2h+ backoff floor",
         "rate_limit_error Anthropic stream-json falls through to immediate retry unclassified",
         "multi-agent setup locks out all agents for hours on recoverable rate limit"
       ],
@@ -381,7 +381,7 @@
       "repo": "massgen/MassGen",
       "signals": [
         "429 with short Retry-After treated identically to quota exhaustion",
-        "STOP cases retried — burns budget in multi-agent orchestration",
+        "STOP cases retried \u2014 burns budget in multi-agent orchestration",
         "credit: @SirBrenton in PR description"
       ],
       "knobs": [
@@ -420,7 +420,7 @@
       "repo": "nicklvsa/claude-hud",
       "signals": [
         "5+ concurrent windows each polling usage API independently",
-        "per-instance backoff does not help — burst is additive across all instances",
+        "per-instance backoff does not help \u2014 burst is additive across all instances",
         "429 on usage display with no Retry-After header"
       ],
       "knobs": [
@@ -462,8 +462,8 @@
       "signals": [
         "anthropic-ratelimit-unified-overage-status: rejected",
         "overage-disabled-reason: org_level_disabled",
-        "session 0% weekly 11% but hard-blocked — dashboard does not show 5h window",
-        "60s backoff does not resolve — window reset takes ~4 hours"
+        "session 0% weekly 11% but hard-blocked \u2014 dashboard does not show 5h window",
+        "60s backoff does not resolve \u2014 window reset takes ~4 hours"
       ],
       "knobs": [
         "anthropic-ratelimit-unified-overage-status",
@@ -1132,7 +1132,7 @@
       "signals": [
         "retryDelay: (retryCount) => retryCount * 1000",
         "First retry delay is 0ms (0 * 1000)",
-        "HTTP-date format Retry-After was silently dropped via parseInt → NaN"
+        "HTTP-date format Retry-After was silently dropped via parseInt \u2192 NaN"
       ],
       "knobs": [
         "retryDelay function",
@@ -1292,7 +1292,7 @@
       "source_url": "https://github.com/gsd-build/gsd-2/issues/5677",
       "repo": "gsd-build/gsd-2",
       "signals": [
-        "openai-codex-responses.ts uses pure exponential backoff for 429 responses — 1s, 2s, 4s — with no Retry-After header consulted.",
+        "openai-codex-responses.ts uses pure exponential backoff for 429 responses \u2014 1s, 2s, 4s \u2014 with no Retry-After header consulted.",
         "The Gemini provider in the same repo handles this correctly: reads Retry-After, HTTP-date format, body patterns, and retryDelay JSON field.",
         "When OpenAI returns Retry-After: 60, all three retries fire inside the cooldown window and fail. Retry budget exhausted. Agent run stalls."
       ],
@@ -1430,6 +1430,27 @@
         "over_cap_failure_policy"
       ],
       "path": "receipts/2026/06/PT-2026-06-28-github-pr-dexter-281-x-reset-false-terminal/receipt.json"
+    },
+    {
+      "id": "PT-2026-07-14-github-issue-superset-4104-slack-anthropic-429-static-fallback",
+      "date": "2026-07-14",
+      "hazard_class": [
+        "rate_limit_429"
+      ],
+      "source_url": "https://github.com/superset-sh/superset/issues/4104",
+      "repo": "superset-sh/superset",
+      "signals": [
+        "Anthropic.APIError status === 429",
+        "Retry-After not inspected at Slack agent call site",
+        "SDK client parses retry-after seconds and HTTP-date formats",
+        "static overload message returned before retry budget exhaustion"
+      ],
+      "knobs": [
+        "retry_after_floor_ms",
+        "retry_budget_max_attempts",
+        "retry_budget_max_elapsed_ms"
+      ],
+      "path": "receipts/2026/07/PT-2026-07-14-github-issue-superset-4104-slack-anthropic-429-static-fallback/receipt.json"
     }
   ]
 }
