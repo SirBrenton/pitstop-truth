@@ -6,7 +6,7 @@
     "capability": "execution_failure_classification",
     "thesis": "AI/API systems fail when execution signals or constraints are misclassified, hidden, omitted, scoped incorrectly, or owned by the wrong layer. The recurring result is retry amplification, false liveness, blocked failover, undefined client behavior, and avoidable cost under shared constraints.",
     "corpus": {
-        "receipts": 68,
+        "receipts": 69,
         "hazard_classes": [
             "rate_limit_429",
             "timeout_deadline",
@@ -64,11 +64,12 @@
             "VoltAgent/voltagent",
             "jo-inc/camofox-browser",
             "langchain-ai/langchainjs",
-            "virattt/dexter"
+            "virattt/dexter",
+            "superset-sh/superset"
         ],
         "date_range": {
             "earliest": "2025-07-15",
-            "latest": "2026-06-28"
+            "latest": "2026-07-14"
         }
     },
     "query": {
@@ -692,7 +693,7 @@
     },
     "contact": "brent@pitstop.dev",
     "license": "Apache-2.0",
-    "last_updated": "2026-06-30",
+    "last_updated": "2026-07-14",
     "specs": {
         "taxonomy": "https://github.com/SirBrenton/pitstop-truth/blob/main/specs/EXECUTION_FAILURE_TAXONOMY_v1.md",
         "contract": "https://github.com/SirBrenton/pitstop-truth/blob/main/specs/EXECUTION_CONTRACT_v1.1.md"
