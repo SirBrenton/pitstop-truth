@@ -1,0 +1,133 @@
+{
+  "schema_version": "receipt.v0",
+  "id": "PT-2026-07-15-github-issue-litellm-15526-429-readiness-restart-storm",
+  "created_at": "2026-07-15T00:00:00Z",
+  "source": {
+    "url": "https://github.com/BerriAI/litellm/issues/15526#issuecomment-4964124665",
+    "kind": "github_issue",
+    "repo": "BerriAI/litellm",
+    "issue_or_pr": 15526,
+    "issue_url": "https://github.com/BerriAI/litellm/issues/15526"
+  },
+  "hazard": {
+    "class": [
+      "rate_limit_429",
+      "retry_budget_exhausted"
+    ],
+    "summary": "Provider 429/retry pressure saturates LiteLLM proxy execution resources, delaying Kubernetes readiness probes and triggering restart-driven availability collapse.",
+    "signals": [
+      "LiteLLM proxy v1.77.7 under sustained provider 429s",
+      "Peak load reported at 500 QPS with average load around 60 QPS",
+      "num_retries: 3",
+      "request_timeout: 600",
+      "readinessProbe path: /health/readiness",
+      "readinessProbe timeoutSeconds: 1",
+      "all pods failing readiness probes and restarting",
+      "separateHealthApp workaround can mask main-process saturation",
+      "/health/readiness shares event loop with request processing",
+      "Redis call in readiness path competes with proxy traffic"
+    ]
+  },
+  "constraints": [
+    "Control-plane health checks must not depend on the same saturated execution path that provider retries can congest.",
+    "Health isolation must still observe main-process liveness; a separate health app must not blindly report healthy when the main proxy is saturated or deadlocked.",
+    "Provider retry behavior must be bounded by max attempts and max elapsed time so retry pressure cannot consume the event loop indefinitely.",
+    "Readiness failure should remove a pod from routing without creating a restart storm that reduces capacity and amplifies upstream 429 pressure.",
+    "Provider 429 handling must emit degraded-state signals visible to orchestration, routing, and operators.",
+    "Retry scheduling, cooldown management, logging callbacks, and health probes must have explicit resource and latency budgets."
+  ],
+  "knobs": [
+    "retry_budget_max_attempts",
+    "retry_budget_max_elapsed_ms",
+    "provider_cooldown_scope_key",
+    "max_inflight_provider_requests",
+    "queue_depth_limit",
+    "event_loop_lag_threshold_ms",
+    "readiness_timeout_seconds",
+    "readiness_dependency_budget_ms",
+    "startup_probe_grace_period_seconds",
+    "separate_health_app_main_heartbeat_timeout_ms",
+    "redis_health_check_timeout_ms"
+  ],
+  "verification": [
+    "Run a 60 to 500 QPS load test against LiteLLM with mocked provider 429 responses and measure /health/readiness latency.",
+    "Repeat the load test with num_retries: 1 and num_retries: 3 while tracking active tasks, retry queue depth, event-loop lag, and readiness failures.",
+    "Simulate Redis latency in the readiness path and verify health responses remain within the configured Kubernetes timeout budget or fail explicitly.",
+    "Verify that readiness degradation removes pods from routing without causing synchronized restart storms across all replicas.",
+    "If using a separate health app, add a main-process heartbeat/event-loop-lag dependency and prove it reports unhealthy when the main proxy is saturated.",
+    "Verify provider 429 pressure emits decision/degradation events that operators can distinguish from generic pod failure.",
+    "Confirm bounded retry budgets prevent provider 429s from consuming all execution capacity under sustained load."
+  ],
+  "tags": [
+    "github_issue",
+    "litellm",
+    "kubernetes",
+    "readiness_probe",
+    "rate_limit",
+    "retry_budget",
+    "control_plane",
+    "data_plane_backpressure",
+    "restart_storm",
+    "availability"
+  ],
+  "signal_failure_type": "hidden",
+  "signal_topology": {
+    "signal_origin": "provider",
+    "failure_layer": "runtime",
+    "decision_layer": "router",
+    "signal_failure_type": "hidden",
+    "downstream_effect": "false_unavailable"
+  },
+  "mitigation_signature": {
+    "hazards": [
+      "rate_limit_429",
+      "retry_budget_exhausted"
+    ],
+    "constraints": [
+      "Isolate control-plane health from data-plane retry saturation.",
+      "Preserve main-process liveness visibility when health is isolated.",
+      "Bound retry pressure with global attempts and elapsed-time budgets.",
+      "Prevent readiness failures from creating capacity-reducing restart storms."
+    ],
+    "knobs": [
+      "retry_budget_max_attempts",
+      "retry_budget_max_elapsed_ms",
+      "event_loop_lag_threshold_ms",
+      "readiness_timeout_seconds",
+      "startup_probe_grace_period_seconds"
+    ],
+    "anti_patterns": [
+      "control_plane_health_coupled_to_data_plane_backpressure",
+      "readiness_probe_shares_saturated_event_loop",
+      "separate_health_app_masks_main_process_failure",
+      "provider_429_retry_pressure_triggers_restart_storm"
+    ]
+  },
+  "routing_impact": {
+    "default_action": "defer_and_probe",
+    "cooldown_source": "server_hint",
+    "cooldown_scope_key": "provider_model_or_route",
+    "during_cooldown": {
+      "make_http_call": false,
+      "eligible_for_routing": false,
+      "emit_decision_event": true
+    },
+    "after_cooldown": {
+      "probe_strategy": "single_flight",
+      "max_probe_qps": 1
+    }
+  },
+  "impact": {
+    "cost_channels": [
+      "workflow_failure",
+      "retry_amplification",
+      "latency",
+      "support_escalation",
+      "incident_risk",
+      "customer_visible_failure"
+    ],
+    "operator_impact": "Under sustained provider 429s, the proxy may fail readiness checks, restart pods, reduce available capacity, and amplify the load condition it is trying to survive.",
+    "business_consequence": "Provider throttling can escalate into platform downtime when retry pressure and health orchestration are coupled through shared runtime resources."
+  },
+  "notes": "Open issue with operator evidence and multi-user corroboration. Original report describes LiteLLM proxy v1.77.7 under sustained provider 429s failing Kubernetes readiness probes and restarting all pods. A later comment argues the separateHealthApp workaround can mask main-process saturation because it may report healthy without observing the main proxy. Treat as a high-signal open receipt, not a confirmed fixed/adopted mitigation. Proposed pattern: control-plane-health-coupled-to-data-plane-backpressure."
+}
