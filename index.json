@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-07-14T22:51:58Z",
+  "updated_at": "2026-07-16T02:01:50Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -1451,6 +1451,32 @@
         "retry_budget_max_elapsed_ms"
       ],
       "path": "receipts/2026/07/PT-2026-07-14-github-issue-superset-4104-slack-anthropic-429-static-fallback/receipt.json"
+    },
+    {
+      "id": "PT-2026-07-15-github-issue-litellm-15526-429-readiness-restart-storm",
+      "date": "2026-07-15",
+      "hazard_class": [
+        "rate_limit_429",
+        "retry_budget_exhausted"
+      ],
+      "source_url": "https://github.com/BerriAI/litellm/issues/15526#issuecomment-4964124665",
+      "repo": "BerriAI/litellm",
+      "signals": [
+        "provider 429s under sustained load",
+        "readinessProbe path /health/readiness",
+        "readinessProbe timeoutSeconds: 1",
+        "all pods failing readiness probes and restarting",
+        "separateHealthApp can mask main-process saturation",
+        "health readiness shares event loop with request processing"
+      ],
+      "knobs": [
+        "retry_budget_max_attempts",
+        "retry_budget_max_elapsed_ms",
+        "event_loop_lag_threshold_ms",
+        "readiness_timeout_seconds",
+        "startup_probe_grace_period_seconds"
+      ],
+      "path": "receipts/2026/07/PT-2026-07-15-github-issue-litellm-15526-429-readiness-restart-storm/receipt.json"
     }
   ]
 }
