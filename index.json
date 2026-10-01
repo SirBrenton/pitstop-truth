@@ -1,6 +1,6 @@
 {
   "schema_version": "index.v0",
-  "updated_at": "2026-07-16T02:01:50Z",
+  "updated_at": "2026-09-30T23:26:16Z",
   "receipts": [
     {
       "id": "PT-2026-02-18-pulumi-azure-native-429-privateendpoint",
@@ -933,7 +933,10 @@
         "retryableStatusCodes_separation",
         "Retry-After_before_backoff"
       ],
-      "path": "receipts/2026/04/PT-2026-04-22-github-copilotkit-3637-retry-after-overridden/receipt.json"
+      "path": "receipts/2026/04/PT-2026-04-22-github-copilotkit-3637-retry-after-overridden/receipt.json",
+      "evidence_status": "qualified",
+      "correction_id": "PTC-2026-09-30-copilotkit-3637-reachability",
+      "correction_path": "corrections/2026/09/PTC-2026-09-30-copilotkit-3637-reachability/correction.json"
     },
     {
       "id": "PT-2025-10-06-github-azul-openapi-429-undocumented",

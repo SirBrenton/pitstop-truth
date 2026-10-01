@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "pitstop-truth evidence correction",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "id",
+    "created_at",
+    "target_receipt_id",
+    "disposition",
+    "invalidated_claims",
+    "preserved_claims",
+    "evidence"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "enum": [
+        "correction.v0"
+      ]
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^PTC-\\d{4}-\\d{2}-\\d{2}-[a-z0-9-]{8,}$"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "target_receipt_id": {
+      "type": "string",
+      "pattern": "^PT-\\d{4}-\\d{2}-\\d{2}-[a-z0-9-]{8,}$"
+    },
+    "disposition": {
+      "type": "string",
+      "enum": [
+        "qualified"
+      ]
+    },
+    "invalidated_claims": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "preserved_claims": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "url",
+          "kind",
+          "supports"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "github_issue",
+              "github_pr",
+              "other"
+            ]
+          },
+          "supports": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

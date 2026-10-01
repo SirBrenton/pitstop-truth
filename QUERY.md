@@ -34,6 +34,10 @@ Contains:
 - list of all receipts
 - paths to each artifact
 - metadata (repo, date, hazard)
+- evidence qualification metadata when a published receipt has been corrected
+
+When an index entry has `evidence_status: qualified`, load its
+`correction_path` before relying on the receipt's claims.
 
 ---
 
@@ -66,6 +70,10 @@ Use Pitstop Truth to classify and resolve failures:
    - or by scanning pattern IDs
 
 3. Open the canonical receipt
+
+   If its `index.json` entry has `evidence_status: qualified`, load the
+   referenced `correction_path` and apply that qualification before using
+   the receipt as evidence.
 
 4. Apply:
    - constraints (what must be true)
@@ -178,8 +186,8 @@ The corpus is optimized for:
 ## Notes
 
 - capability.json is the fastest entry point
-- receipts provide ground truth detail
-- index enables traversal and discovery
+- receipts provide preserved evidentiary detail; qualified receipts must be read with their registered correction
+- index enables traversal, discovery, and evidence qualification
 
 ---
 

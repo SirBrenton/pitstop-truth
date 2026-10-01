@@ -397,8 +397,35 @@ git push
 ## Conventions
 
 - IDs: PT-YYYY-MM-DD-<slug> (slug convention: github-issue-..., github-pr-..., log-..., incident-...)
-- Immutability: receipts should be treated as immutable once published; if you must revise, add a new receipt or note a superseding receipt in notes.
-- Index stability: index.json is the canonical list for machines; paths are repo-relative.
+- Immutability: published receipt files are not silently rewritten. Later evidence that narrows a published claim is recorded as a separate `correction.v0` artifact and surfaced from the target receipt's `index.json` entry.
+- Index stability: `index.json` is the canonical list for machines; paths are repo-relative.
+- Evidence qualification: absence of `evidence_status` means no correction is registered. If `evidence_status` is `qualified`, consumers MUST consult `correction_path` before relying on the target receipt's claims.
+- Corpus accounting: `correction.v0` artifacts are governance records, not execution-failure receipts, and do not increase the corpus receipt count.
+
+## Evidence corrections
+
+Published receipts remain immutable historical artifacts. When later evidence establishes that only part of a receipt remains supportable, Pitstop Truth records the qualification separately rather than rewriting or deleting the receipt.
+
+A qualified index entry contains:
+
+- `evidence_status`: currently `qualified`
+- `correction_id`: canonical `PTC-*` correction identifier
+- `correction_path`: repo-relative path to the `correction.v0` artifact
+
+The correction artifact records:
+
+- the target receipt
+- claims that are no longer admissible
+- claims that remain supported
+- the evidence establishing the qualification
+
+Schema: `schemas/correction.v0.json`
+
+Validation:
+
+```bash
+python3 scripts/validate_corrections.py
+```
 
 ## License
 
