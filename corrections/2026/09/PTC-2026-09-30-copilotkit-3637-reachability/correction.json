@@ -1,0 +1,34 @@
+{
+  "schema_version": "correction.v0",
+  "id": "PTC-2026-09-30-copilotkit-3637-reachability",
+  "created_at": "2026-09-30T00:00:00Z",
+  "target_receipt_id": "PT-2026-04-22-github-copilotkit-3637-retry-after-overridden",
+  "disposition": "qualified",
+  "invalidated_claims": [
+    "The scanned fetchWithRetry utility represented a reachable shipped runtime failure at the time the original receipt was created.",
+    "The documented retry behavior propagated to every downstream consumer of the CopilotKit runtime."
+  ],
+  "preserved_claims": [
+    "Issue #3637 identified the retry utility through static analysis.",
+    "The retry utility contained the code shape described by the original static-analysis finding.",
+    "PR #3842 subsequently changed the utility's Retry-After handling."
+  ],
+  "evidence": [
+    {
+      "url": "https://github.com/CopilotKit/CopilotKit/issues/3637",
+      "kind": "github_issue",
+      "supports": "The original finding was explicitly presented as static analysis rather than a runtime-specific reproduction."
+    },
+    {
+      "url": "https://github.com/CopilotKit/CopilotKit/pull/3842",
+      "kind": "github_pr",
+      "supports": "The retry utility's Retry-After handling was subsequently changed."
+    },
+    {
+      "url": "https://github.com/CopilotKit/CopilotKit/issues/4772#issuecomment-5912405481",
+      "kind": "github_issue",
+      "supports": "CopilotKit maintainer investigation states that fetchWithRetry had no shipped runtime callers and that its last callers were removed during the v1.50.0 reimplementation."
+    }
+  ],
+  "notes": "This correction does not erase or rewrite the original receipt. It narrows the evidentiary claims that may be drawn from it. The static-analysis finding and subsequent code change remain part of the historical record; runtime reachability and downstream propagation do not remain admissible claims."
+}

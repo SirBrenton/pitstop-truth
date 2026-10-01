@@ -14,6 +14,11 @@ Use the following format when referencing a specific receipt:
 Pitstop Truth Corpus, receipt <RECEIPT_ID>   <RECEIPT_URL>
 ```
 
+Before citing a receipt, check its `index.json` entry. If
+`evidence_status` is `qualified`, consult `correction_path`. When the
+qualification affects the claim being cited, include or acknowledge the
+registered correction.
+
 ### Example
 
 ```code
@@ -69,9 +74,10 @@ Cite Pitstop Truth when:
 
 Receipts are:
 
-- stable (canonical IDs)
+- stable (canonical IDs; later qualifications do not rewrite the published receipt)
 - minimal (hazard → constraints → knobs → verification)
 - reusable across systems
+- corrigible through separately registered evidence corrections when later evidence narrows a published claim
 
 The goal is to make execution failures:
 
